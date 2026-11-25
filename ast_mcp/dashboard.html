@@ -1,0 +1,2694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dynamic AST HATEOAS Live Console</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --panel: #ffffff;
+      --panel-alt: #f8fafc;
+      --border: #cbd5e1;
+      --border-soft: #e2e8f0;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+      --accent-hover: #0369a1;
+      --accent-soft: #e0f2fe;
+      --green: #16a34a;
+      --green-soft: #dcfce7;
+      --amber: #d97706;
+      --amber-soft: #fef3c7;
+      --red: #dc2626;
+      --red-soft: #fee2e2;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    header h1 { margin: 0; font-size: 1.15rem; letter-spacing: 0.01em; color: #0f172a; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: var(--green-soft);
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    main {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 18px;
+      padding: 18px 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1050px) { main { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+    .card h2 {
+      margin: 0 0 12px 0;
+      font-size: 0.94rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border-soft);
+      padding-bottom: 8px;
+    }
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+    input, select, textarea {
+      width: 100%;
+      background: #ffffff;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      margin-bottom: 10px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .row { display: flex; gap: 10px; }
+    .row > * { flex: 1; }
+    button {
+      background: var(--accent);
+      color: #ffffff;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-weight: 600;
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+    }
+    button:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button.secondary {
+      background: #ffffff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button.secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: #f8fafc; }
+    button.warn { background: var(--amber); border-color: var(--amber); color: #ffffff; }
+    button.warn:hover:not(:disabled) { background: #b45309; border-color: #b45309; }
+    button.success { background: var(--green); border-color: var(--green); color: #ffffff; }
+    button.success:hover:not(:disabled) { background: #15803d; border-color: #15803d; }
+    button.danger { background: var(--red); border-color: var(--red); color: #ffffff; }
+    button.danger:hover:not(:disabled) { background: #b91c1c; border-color: #b91c1c; }
+    .fn-item {
+      border: 1px solid var(--border);
+      background: var(--panel-alt);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .fn-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .fn-title { font-family: var(--mono); font-weight: 700; color: #0f172a; font-size: 0.95rem; }
+    .pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      margin-left: 6px;
+    }
+    .tabs { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 3px 8px;
+      font-size: 0.74rem;
+      background: #ffffff;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .tab-btn.active { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+    pre {
+      margin: 0;
+      background: #f8fafc;
+      color: #0f172a;
+      border: 1px solid var(--border-soft);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      overflow-x: auto;
+      max-height: 280px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .result-banner {
+      background: var(--green-soft);
+      border: 1px solid #86efac;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: #166534;
+    }
+    .result-banner.error {
+      background: var(--red-soft);
+      border-color: #fca5a5;
+      color: #991b1b;
+    }
+    .event-entry {
+      border-left: 4px solid var(--accent);
+      background: var(--panel-alt);
+      border-top: 1px solid var(--border-soft);
+      border-right: 1px solid var(--border-soft);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .event-entry:hover { background: #f1f5f9; border-color: var(--accent); }
+    .event-entry.error { border-left-color: var(--red); }
+    .event-entry.stdin { border-left-color: var(--amber); }
+    .event-entry.mcp { border-left-color: #9333ea; }
+    .event-meta {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      margin-bottom: 4px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.52);
+      backdrop-filter: blur(5px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card {
+      width: 100%;
+      max-width: 800px;
+      max-height: 92vh;
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 25px 55px rgba(15, 23, 42, 0.25);
+      padding: 20px 22px;
+    }
+    .modal-card.wide-modal {
+      max-width: 1180px;
+      border: 2px solid var(--red);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-soft);
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+    .modal-title {
+      margin: 0;
+      font-size: 1.08rem;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .modal-sub { margin: 4px 0 0 0; font-size: 0.82rem; color: var(--muted); }
+    .superseded-banner {
+      display: none;
+      background: var(--amber-soft);
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      margin-bottom: 12px;
+    }
+    .track-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .step-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+    .step-card {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .step-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+      background: #ffffff;
+    }
+    .step-card.done { border-color: #86efac; background: #f0fdf4; }
+    .step-card.failed { border-color: #fca5a5; background: #fef2f2; }
+    .step-card.running { border-color: var(--amber); }
+    .step-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+    .step-name { font-family: var(--mono); font-weight: 700; font-size: 0.88rem; color: #0f172a; }
+    .step-status-pill {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .st-pending { background: #e2e8f0; color: var(--muted); }
+    .st-running { background: var(--amber-soft); color: #b45309; }
+    .st-done { background: var(--green-soft); color: #15803d; }
+    .st-failed { background: var(--red-soft); color: #b91c1c; }
+    .modal-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid var(--border-soft);
+      padding-top: 14px;
+      flex-wrap: wrap;
+    }
+    .cycle-chain-strip {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--red-soft);
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .cycle-node-chip {
+      background: #ffffff;
+      border: 1px solid #fca5a5;
+      padding: 2px 10px;
+      border-radius: 999px;
+    }
+    .side-by-side-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 860px) { .side-by-side-grid { grid-template-columns: 1fr; } }
+    .split-pane {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .split-pane-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-soft);
+      padding-bottom: 6px;
+    }
+    .split-pane textarea { min-height: 195px; margin-bottom: 0; }
+    .lock-badge {
+      background: var(--red);
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .ac-menu {
+      position: fixed;
+      z-index: 10050;
+      display: none;
+      min-width: 260px;
+      max-width: 520px;
+      max-height: 260px;
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+      padding: 4px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+    }
+    .ac-menu.open { display: block; }
+    .ac-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .ac-item:hover, .ac-item.selected { background: var(--accent-soft); color: #0369a1; }
+    .ac-label { font-weight: 600; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+    .ac-meta {
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: var(--panel-alt);
+      border: 1px solid var(--border-soft);
+      padding: 1px 6px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    /* Syntax highlighting & live highlighted editors */
+    .code-editor-wrap {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      margin-bottom: 10px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .split-pane .code-editor-wrap { margin-bottom: 0; }
+    .code-editor-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+    }
+    .code-editor-highlight {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      max-height: none;
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      line-height: 1.45;
+      tab-size: 4;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow: hidden;
+      pointer-events: none;
+      color: var(--text);
+    }
+    textarea.code-editor-input {
+      position: relative;
+      z-index: 1;
+      display: block;
+      width: 100%;
+      margin: 0;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      caret-color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      line-height: 1.45;
+      tab-size: 4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    textarea.code-editor-input:focus {
+      outline: none;
+      box-shadow: none;
+    }
+    textarea.code-editor-input::placeholder {
+      color: #94a3b8;
+      -webkit-text-fill-color: #94a3b8;
+    }
+    textarea.code-editor-input::selection {
+      background: rgba(2, 132, 199, 0.22);
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+    }
+    .tok-kw { color: #7c3aed; font-weight: 600; }
+    .tok-fn { color: #0369a1; font-weight: 600; }
+    .tok-cls { color: #b45309; font-weight: 600; }
+    .tok-str { color: #15803d; }
+    .tok-num { color: #c2410c; }
+    .tok-comment { color: #64748b; font-style: italic; }
+    .tok-dec { color: #be185d; font-weight: 600; }
+    .tok-builtin { color: #0f766e; }
+    .tok-bool { color: #9333ea; font-weight: 600; }
+    .tok-key { color: #0369a1; font-weight: 600; }
+    .tok-ast-node { color: #0284c7; font-weight: 600; }
+    .tok-ast-field { color: #7c3aed; }
+    .tok-op { color: #475569; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dynamic AST &amp; HATEOAS Live Console <span style="color:var(--muted);font-weight:400;">(REST /api &harr; MCP &harr; STDIN Synced)</span></h1>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button id="reopenCycleBtn" class="danger" style="display:none;padding:4px 10px;font-size:0.78rem;" onclick="openCircularityModal()">Resolve Circular AST</button>
+      <button id="reopenWizardBtn" class="warn" style="display:none;padding:4px 10px;font-size:0.78rem;" onclick="openHateoasModal()">Open HATEOAS Action Modal</button>
+      <a href="/api" target="_blank" rel="noopener" style="color:var(--accent);font-family:var(--mono);font-size:0.82rem;font-weight:600;text-decoration:none;">GET /api (hal+json)</a>
+      <div class="badge"><span class="dot"></span><span id="connStatus">Connected (SSE Live)</span></div>
+    </div>
+  </header>
+
+  <main>
+    <div>
+      <div class="card">
+        <h2>Command Runner <span style="font-size:0.75rem;color:var(--muted);text-transform:none;">Posts to REST /api &amp; reflects to STDOUT</span></h2>
+        <div class="row">
+          <div>
+            <label for="toolSelect">Operation</label>
+            <select id="toolSelect" onchange="updateFormFields()">
+              <option value="eval_ast_call">eval_ast_call (POST /api/ast/{name}/eval)</option>
+              <option value="ast_create">ast_create (POST /api/ast — single fn or full Python script)</option>
+              <option value="ast_update">ast_update (PUT /api/ast/{name})</option>
+              <option value="ast_read">ast_read (GET /api/ast)</option>
+              <option value="ast_delete">ast_delete (DELETE /api/ast/{name})</option>
+              <option value="ast_chain">ast_chain (POST /api/chain)</option>
+              <option value="ast_convert">ast_convert (POST /api/convert)</option>
+            </select>
+          </div>
+          <div id="nameWrap">
+            <label id="nameLabel" for="nameInput">Target / Function Name</label>
+            <input id="nameInput" value="entrypoint" autocomplete="off" placeholder="e.g. entrypoint or ast3" />
+          </div>
+        </div>
+
+        <div id="convertWrap" style="display:none;" class="row">
+          <div>
+            <label for="sourceKindSelect">Source Kind</label>
+            <select id="sourceKindSelect">
+              <option value="saved_ast">saved_ast (Registry Key)</option>
+              <option value="ast">ast (Code / Dump / JSON AST)</option>
+              <option value="json">json (Sample JSON Object)</option>
+              <option value="schema">schema (JSON Schema)</option>
+              <option value="pydantic">pydantic (BaseModel Class)</option>
+              <option value="dataclass">dataclass (@dataclass Class)</option>
+            </select>
+          </div>
+          <div>
+            <label for="targetKindSelect">Target Kind</label>
+            <select id="targetKindSelect">
+              <option value="pydantic">pydantic (BaseModel)</option>
+              <option value="dataclass">dataclass (@dataclass)</option>
+              <option value="ast">ast (FunctionDef AST)</option>
+              <option value="json_schema">json_schema (JSON Schema)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="argsWrap">
+          <label for="argsInput">Arguments (Literal `3`, List `[3, 4]`, List+Object `[3, {"k": 1}]`, or Object `{"x": 3}`)</label>
+          <input id="argsInput" value="[3]" autocomplete="off" placeholder='e.g. 3 or [3, 4] or [3, {"k": 1}] or {"x": 3}' />
+        </div>
+
+        <div id="codeWrap" style="display:none;">
+          <label id="codeLabel" for="codeInput">Full-Page Python Script, Single Function, Serialized `ast.dump()`, or JSON AST</label>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <input id="geminiLinePrompt" style="margin-bottom:0;flex:1;" autocomplete="off" placeholder="Gemini Line Gen (Alt+G): describe the line to insert at cursor..." />
+            <button id="geminiLineBtn" type="button" class="secondary" onclick="generateLineIntoEditor()">Generate Line</button>
+          </div>
+          <div class="code-editor-wrap">
+            <pre id="codeInputHighlight" class="code-editor-highlight" aria-hidden="true"></pre>
+            <textarea id="codeInput" class="code-editor-input" spellcheck="false" placeholder="import math&#10;&#10;class Helper:&#10;    def calc(self, x: int) -> float:&#10;        return math.sqrt(x)&#10;&#10;def fn(x: int = 9) -> float:&#10;    return Helper().calc(x)"></textarea>
+          </div>
+          <label id="skipRoundtripWrap" for="skipRoundtripInput" style="display:none;align-items:center;gap:6px;cursor:pointer;margin-bottom:10px;">
+            <input type="checkbox" id="skipRoundtripInput" style="width:auto;margin:0;" />
+            Bypass 4-stage AST roundtrip verification (<code>skip_roundtrip</code>)
+          </label>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="runCommand()">Execute Command</button>
+          <button class="secondary" onclick="previewDiffForEditor()">Preview Diff</button>
+          <button class="secondary" onclick="runTestsForTarget()">Run Tests</button>
+          <button class="secondary" onclick="rollbackTarget()">Rollback</button>
+          <button class="secondary" onclick="quickEval('entrypoint', [3])">Quick Eval entrypoint(3)</button>
+          <button class="secondary" onclick="followRestLink('GET', '/api')">Discover GET /api</button>
+          <button class="secondary" onclick="refreshSnapshot()">Refresh State</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Gemini MCP Tool Agent <span id="mcpToolCountBadge" style="font-size:0.75rem;color:var(--muted);text-transform:none;">Wired to MCP tools</span></h2>
+        <div id="geminiChatTranscript" style="display:none;max-height:220px;overflow-y:auto;background:var(--panel-alt);border:1px solid var(--border-soft);border-radius:6px;padding:10px;margin-bottom:10px;font-size:0.82rem;"></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="geminiChatInput" style="margin-bottom:0;flex:1;" autocomplete="off" placeholder="Ask Gemini to inspect, create, test, analyze, or evaluate AST functions via MCP tools..." />
+          <button id="geminiChatSendBtn" type="button" onclick="sendGeminiChat()">Ask Gemini</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Latest Execution &amp; Conversion Output <span id="recoverySlot" style="display:flex;gap:6px;flex-wrap:wrap;"></span></h2>
+        <div id="resultSummary" class="result-banner">Ready. Run an execution/conversion or call REST /api.</div>
+        <div id="stdoutWrap" style="display:none;margin-bottom:10px;">
+          <label for="stdoutPreview">Captured STDOUT</label>
+          <pre id="stdoutPreview" style="background:#0f172a;color:#86efac;"></pre>
+        </div>
+        <div id="convertedCodeWrap" style="display:none;margin-bottom:10px;">
+          <label for="convertedCodePreview">Generated / Diff / Pytest Artifact</label>
+          <pre id="convertedCodePreview"></pre>
+        </div>
+        <label for="lastResponse">Full HATEOAS `application/hal+json` Payload</label>
+        <pre id="lastResponse">{}</pre>
+      </div>
+
+      <div class="card">
+        <h2>Live Synced Executions &amp; Conversions <span style="font-size:0.75rem;color:var(--muted);text-transform:none;">Click any entry to inspect</span></h2>
+        <div id="eventList"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Live AST Registry (<span id="fnCount">0</span>)</h2>
+        <div id="registryList"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="circularityModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="circularityModalTitle">
+    <div class="modal-card wide-modal">
+      <div class="modal-header">
+        <div>
+          <h3 id="circularityModalTitle" class="modal-title">Circular AST Dependency Detected — Side-by-Side Resolver</h3>
+          <p id="circularityModalSub" class="modal-sub">Break the mutual call cycle between these AST functions. This modal remains locked until circularity is resolved.</p>
+        </div>
+        <span id="cycleLockBadge" class="lock-badge">Locked Until Resolved</span>
+      </div>
+
+      <div id="cycleChainStrip" class="cycle-chain-strip"></div>
+      <div id="cycleStatusBanner" class="result-banner error">Remove the recursive/mutual call in at least one function below, then click Save &amp; Verify.</div>
+
+      <div id="cycleSelectorRow" style="display:none;" class="row">
+        <div>
+          <label for="cycleLeftSelect">Left Editor Function</label>
+          <select id="cycleLeftSelect" onchange="syncCycleEditorsFromSelect()"></select>
+        </div>
+        <div>
+          <label for="cycleRightSelect">Right Editor Function</label>
+          <select id="cycleRightSelect" onchange="syncCycleEditorsFromSelect()"></select>
+        </div>
+      </div>
+
+      <div class="side-by-side-grid">
+        <div class="split-pane">
+          <div class="split-pane-header">
+            <span id="leftNodeTitle" class="fn-title">ast1</span>
+            <span id="leftNodeDeps" class="pill">calls: []</span>
+          </div>
+          <label for="cycleLeftCode">Left Function Python Source</label>
+          <div class="code-editor-wrap">
+            <pre id="cycleLeftCodeHighlight" class="code-editor-highlight" aria-hidden="true"></pre>
+            <textarea id="cycleLeftCode" class="code-editor-input" spellcheck="false" placeholder="def ast1(x: int) -> int:&#10;    return x * 2 + 1"></textarea>
+          </div>
+        </div>
+
+        <div class="split-pane">
+          <div class="split-pane-header">
+            <span id="rightNodeTitle" class="fn-title">ast2</span>
+            <span id="rightNodeDeps" class="pill">calls: []</span>
+          </div>
+          <label for="cycleRightCode">Right Function Python Source</label>
+          <div class="code-editor-wrap">
+            <pre id="cycleRightCodeHighlight" class="code-editor-highlight" aria-hidden="true"></pre>
+            <textarea id="cycleRightCode" class="code-editor-input" spellcheck="false" placeholder="def ast2(y: int) -> int:&#10;    return ast1(y) ** 2"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div style="font-size:0.78rem;color:var(--muted);">
+          Tip: Keep one direction (e.g. <code>ast2 &rarr; ast1</code>) and remove the back-edge call from <code>ast1</code>.
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button id="cycleSaveVerifyBtn" class="success" onclick="saveAndVerifyCircularity()">Save Both &amp; Verify Cycle Resolved</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hateoasModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="hateoasModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 id="hateoasModalTitle" class="modal-title">HATEOAS Suggested Action Plan</h3>
+          <p id="hateoasModalSub" class="modal-sub">Execute suggested hypermedia transitions step-by-step.</p>
+        </div>
+        <span id="modalProgressBadge" class="pill">Step 0 / 0</span>
+      </div>
+
+      <div id="modalSupersededBanner" class="superseded-banner">
+        New HATEOAS hypermedia state received — the previous command chain was outdated and has been replaced with the latest suggested actions.
+      </div>
+
+      <div id="modalTrackSelector" class="track-selector"></div>
+      <div id="modalOverallStatus" class="result-banner">Awaiting step execution.</div>
+      <div id="modalStepList" class="step-list"></div>
+
+      <div class="modal-footer">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button id="modalNextStepBtn" onclick="executeNextModalStep()">Execute Next Step</button>
+          <button id="modalRunAllBtn" class="secondary" onclick="executeAllRemainingModalSteps()">Run Remaining Steps</button>
+        </div>
+        <button id="modalExitBtn" class="secondary" onclick="closeHateoasModal()">Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="acPopup" class="ac-menu" role="listbox" aria-label="Autocomplete suggestions"></div>
+
+  <script>
+    const activeFormatTab = {};
+    let lastSeenEventId = 0;
+    let latestSnapshot = { items: [], events: [] };
+    let fallbackPollTimer = null;
+
+    const cycleState = {
+      active: false,
+      cyclePath: [],
+      nodes: [],
+      leftName: '',
+      rightName: '',
+      isSaving: false,
+    };
+
+    const wizardState = {
+      signature: null,
+      policy: '',
+      message: '',
+      tracks: [],
+      selectedTrackIndex: 0,
+      steps: [],
+      isRunningStep: false,
+      supersededCount: 0,
+      completedAll: false,
+      missingDefaultParams: [],
+    };
+
+    let latestMcpTools = [];
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function safeParseJsonResponse(resp) {
+      const raw = await resp.text();
+      const trimmed = raw.trim();
+      if (!trimmed) {
+        return resp.ok
+          ? { status: 'ok' }
+          : { status: 'error', error_type: 'empty_response', message: `Empty response body (HTTP ${resp.status}).` };
+      }
+      try {
+        return JSON.parse(trimmed);
+      } catch (_) {
+        const looksHtml = trimmed.startsWith('<') || /<!doctype|<html/i.test(trimmed);
+        const titleM = trimmed.match(/<title[^>]*>([^<]+)<\/title>/i);
+        const titleHint = titleM ? ` (${titleM[1].trim()})` : '';
+        return {
+          status: 'error',
+          error_type: looksHtml ? 'html_instead_of_json' : 'invalid_json_response',
+          message: looksHtml
+            ? `API endpoint returned HTML instead of JSON (HTTP ${resp.status}${titleHint}). Please retry.`
+            : `Invalid JSON response (HTTP ${resp.status}): ${trimmed.slice(0, 160)}`,
+        };
+      }
+    }
+
+    const PY_KEYWORDS = new Set([
+      'False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await', 'break',
+      'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'finally',
+      'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'match',
+      'case', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try',
+      'while', 'with', 'yield'
+    ]);
+
+    const PY_BUILTINS = new Set([
+      'int', 'float', 'str', 'bool', 'list', 'dict', 'set', 'tuple', 'bytes',
+      'object', 'type', 'Any', 'Optional', 'Union', 'List', 'Dict', 'Tuple',
+      'Set', 'BaseModel', 'Field', 'dataclass', 'len', 'range', 'print',
+      'sum', 'min', 'max', 'abs', 'round', 'sorted', 'enumerate', 'zip',
+      'map', 'filter', 'isinstance', 'issubclass', 'super', 'Exception', 'ValueError', 'TypeError'
+    ]);
+
+    function highlightPython(code) {
+      if (!code) return '';
+      const src = String(code);
+      const tokenRe = /(#[^\n]*)|(@[A-Za-z_][A-Za-z0-9_.]*)|((?:[fFrRbBuU]{0,2})(?:"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'))|(0[xXoObB][0-9A-Fa-f_]+|\b\d+(?:_\d+)*(?:\.\d+(?:_\d+)*)?(?:[eE][+-]?\d+)?\b)|(\b[A-Za-z_][A-Za-z0-9_]*\b)|([+\-*/%=!<>&|^~@:]+)|(\s+)/g;
+      let out = '';
+      let lastIdx = 0;
+      let prevSigTok = '';
+      let m;
+
+      while ((m = tokenRe.exec(src)) !== null) {
+        if (m.index > lastIdx) {
+          out += escapeHtml(src.slice(lastIdx, m.index));
+        }
+        const full = m[0];
+        if (m[1]) {
+          out += `<span class="tok-comment">${escapeHtml(full)}</span>`;
+        } else if (m[2]) {
+          out += `<span class="tok-dec">${escapeHtml(full)}</span>`;
+        } else if (m[3]) {
+          out += `<span class="tok-str">${escapeHtml(full)}</span>`;
+          prevSigTok = full;
+        } else if (m[4]) {
+          out += `<span class="tok-num">${escapeHtml(full)}</span>`;
+          prevSigTok = full;
+        } else if (m[5]) {
+          if (full === 'True' || full === 'False' || full === 'None') {
+            out += `<span class="tok-bool">${escapeHtml(full)}</span>`;
+          } else if (PY_KEYWORDS.has(full)) {
+            out += `<span class="tok-kw">${escapeHtml(full)}</span>`;
+          } else if (prevSigTok === 'def') {
+            out += `<span class="tok-fn">${escapeHtml(full)}</span>`;
+          } else if (prevSigTok === 'class') {
+            out += `<span class="tok-cls">${escapeHtml(full)}</span>`;
+          } else if (PY_BUILTINS.has(full)) {
+            out += `<span class="tok-builtin">${escapeHtml(full)}</span>`;
+          } else {
+            out += escapeHtml(full);
+          }
+          prevSigTok = full;
+        } else if (m[6]) {
+          out += `<span class="tok-op">${escapeHtml(full)}</span>`;
+          prevSigTok = full;
+        } else {
+          out += escapeHtml(full);
+        }
+        lastIdx = tokenRe.lastIndex;
+      }
+      if (lastIdx < src.length) {
+        out += escapeHtml(src.slice(lastIdx));
+      }
+      return out;
+    }
+
+    function highlightJson(text) {
+      if (!text) return '';
+      const src = String(text);
+      const tokenRe = /("(?:\\.|[^"\\])*")(\s*:)?|(\b(?:true|false|null)\b)|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|([{}[\],:])|(\s+)/g;
+      let out = '';
+      let lastIdx = 0;
+      let m;
+
+      while ((m = tokenRe.exec(src)) !== null) {
+        if (m.index > lastIdx) {
+          out += escapeHtml(src.slice(lastIdx, m.index));
+        }
+        if (m[1] && m[2]) {
+          out += `<span class="tok-key">${escapeHtml(m[1])}</span>${escapeHtml(m[2])}`;
+        } else if (m[1]) {
+          out += `<span class="tok-str">${escapeHtml(m[1])}</span>`;
+        } else if (m[3]) {
+          out += `<span class="tok-bool">${escapeHtml(m[3])}</span>`;
+        } else if (m[4]) {
+          out += `<span class="tok-num">${escapeHtml(m[4])}</span>`;
+        } else if (m[5]) {
+          out += `<span class="tok-op">${escapeHtml(m[5])}</span>`;
+        } else {
+          out += escapeHtml(m[0]);
+        }
+        lastIdx = tokenRe.lastIndex;
+      }
+      if (lastIdx < src.length) {
+        out += escapeHtml(src.slice(lastIdx));
+      }
+      return out;
+    }
+
+    function highlightAstDump(text) {
+      if (!text) return '';
+      const src = String(text);
+      const tokenRe = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(\b[A-Za-z_][A-Za-z0-9_]*)(?=\s*\()|(\b[A-Za-z_][A-Za-z0-9_]*)(?=\s*=)|(\b(?:True|False|None)\b)|(-?\d+(?:\.\d+)?)|([()[\],=])|(\s+)/g;
+      let out = '';
+      let lastIdx = 0;
+      let m;
+
+      while ((m = tokenRe.exec(src)) !== null) {
+        if (m.index > lastIdx) {
+          out += escapeHtml(src.slice(lastIdx, m.index));
+        }
+        if (m[1]) {
+          out += `<span class="tok-str">${escapeHtml(m[1])}</span>`;
+        } else if (m[2]) {
+          out += `<span class="tok-ast-node">${escapeHtml(m[2])}</span>`;
+        } else if (m[3]) {
+          out += `<span class="tok-ast-field">${escapeHtml(m[3])}</span>`;
+        } else if (m[4]) {
+          out += `<span class="tok-bool">${escapeHtml(m[4])}</span>`;
+        } else if (m[5]) {
+          out += `<span class="tok-num">${escapeHtml(m[5])}</span>`;
+        } else if (m[6]) {
+          out += `<span class="tok-op">${escapeHtml(m[6])}</span>`;
+        } else {
+          out += escapeHtml(m[0]);
+        }
+        lastIdx = tokenRe.lastIndex;
+      }
+      if (lastIdx < src.length) {
+        out += escapeHtml(src.slice(lastIdx));
+      }
+      return out;
+    }
+
+    function detectHighlightFormat(text, explicitFormat) {
+      if (explicitFormat) return explicitFormat;
+      const trimmed = String(text || '').trim();
+      if (!trimmed) return 'python';
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) return 'json';
+      if (/^(Module|FunctionDef|AsyncFunctionDef|ClassDef|Expression)\s*\(/.test(trimmed)) return 'ast_dump';
+      return 'python';
+    }
+
+    function highlightCodeByFormat(text, formatHint) {
+      const fmt = detectHighlightFormat(text, formatHint);
+      if (fmt === 'json' || fmt === 'json_ast' || fmt === 'json_schema') {
+        return highlightJson(text);
+      }
+      if (fmt === 'ast_dump' || fmt === 'serialized_ast' || fmt === 'pretty_ast') {
+        return highlightAstDump(text);
+      }
+      return highlightPython(text);
+    }
+
+    function syncHighlightedEditor(textareaId, formatHint) {
+      const ta = document.getElementById(textareaId);
+      const pre = document.getElementById(`${textareaId}Highlight`);
+      if (!ta || !pre) return;
+      const val = ta.value || '';
+      const resolvedHint = formatHint || (ta.dataset ? ta.dataset.hlFormat : '');
+      pre.innerHTML = highlightCodeByFormat(val, resolvedHint) + (val.endsWith('\n') ? ' ' : '');
+      pre.scrollTop = ta.scrollTop;
+      pre.scrollLeft = ta.scrollLeft;
+    }
+
+    function bindHighlightedEditor(textareaId, formatHint) {
+      const ta = document.getElementById(textareaId);
+      const pre = document.getElementById(`${textareaId}Highlight`);
+      if (!ta || !pre) return;
+      if (formatHint && ta.dataset) ta.dataset.hlFormat = formatHint;
+      if (!ta.dataset.hlBound) {
+        ta.dataset.hlBound = '1';
+        ta.addEventListener('input', () => syncHighlightedEditor(textareaId));
+        ta.addEventListener('scroll', () => {
+          pre.scrollTop = ta.scrollTop;
+          pre.scrollLeft = ta.scrollLeft;
+        });
+      }
+      syncHighlightedEditor(textareaId, formatHint);
+    }
+
+    function updateStepFieldFromEditor(idx, field, rawVal) {
+      const step = wizardState.steps[idx];
+      if (!step) return;
+      if (field === 'href') {
+        step.href = rawVal.trim();
+      } else if (field === 'body') {
+        step.rawBodyText = rawVal;
+        try {
+          step.body = rawVal.trim() === '' ? undefined : JSON.parse(rawVal);
+          step.parseError = null;
+        } catch (err) {
+          step.parseError = `Invalid JSON: ${err.message}`;
+        }
+      }
+    }
+
+    function applyDefaultInputToStepCode(paramName, rawDefaultVal) {
+      const step0 = wizardState.steps[0];
+      if (!step0 || !step0.body || typeof step0.body.code_or_ast !== 'string') return;
+
+      const trimmed = rawDefaultVal.trim();
+      const pyVal = trimmed === '' ? 'None' : trimmed;
+      let code = step0.body.code_or_ast;
+
+      const escaped = paramName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const sigRegex = new RegExp(`(\\b${escaped}\\b(?:\\s*:\\s*[^=,\\)]+)?)(\\s*=\\s*[^,\\)]+)?`);
+      if (sigRegex.test(code)) {
+        code = code.replace(sigRegex, `$1 = ${pyVal}`);
+      }
+
+      step0.body.code_or_ast = code;
+      step0.rawBodyText = JSON.stringify(step0.body, null, 2);
+      const ta = document.getElementById('modalStepBody_0');
+      if (ta) {
+        ta.value = step0.rawBodyText;
+        syncHighlightedEditor('modalStepBody_0', 'json');
+      }
+    }
+
+    const ACTIONABLE_RELS = [
+      ['set_default_and_retry', 'Set Default & Retry'],
+      ['recovery_chain', 'Full Recovery Chain'],
+      ['apply_patched_update', 'Apply Updated Signature / Patch'],
+      ['install_module', 'Install Missing Module'],
+      ['create_local_module_file', 'Create Local Module Script'],
+      ['create_shell', 'Create Blank AST Shell'],
+      ['bypass_and_create', 'Bypass Roundtrip & Create'],
+      ['bypass_and_update', 'Bypass Roundtrip & Update'],
+      ['register_converted_ast', 'Register Converted AST'],
+      ['recreate', 'Recreate Deleted AST'],
+      ['retry', 'Retry Original Request'],
+    ];
+
+    function hasUnresolvedTemplate(val) {
+      if (!val) return false;
+      const decoded = decodeURIComponent(String(val));
+      return /\{[^}]+\}/.test(decoded);
+    }
+
+    function isValidPyIdentifier(val) {
+      return typeof val === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(val);
+    }
+
+    function detectCycleInRegistry(items) {
+      const graph = {};
+      const itemMap = {};
+      for (const item of (items || [])) {
+        itemMap[item.name] = item;
+        const deps = (item.compile_metadata && item.compile_metadata.dependencies) || item.dependencies || [];
+        graph[item.name] = Array.isArray(deps) ? deps : [];
+      }
+
+      const visited = new Set();
+      const stack = [];
+
+      function dfs(node) {
+        const idx = stack.indexOf(node);
+        if (idx !== -1) return stack.slice(idx).concat([node]);
+        if (visited.has(node)) return null;
+        visited.add(node);
+        stack.push(node);
+        for (const dep of (graph[node] || [])) {
+          if (graph[dep]) {
+            const found = dfs(dep);
+            if (found) return found;
+          }
+        }
+        stack.pop();
+        return null;
+      }
+
+      for (const name of Object.keys(graph)) {
+        const cycle = dfs(name);
+        if (cycle) {
+          const unique = [];
+          const seen = new Set();
+          for (const n of cycle) {
+            if (!seen.has(n) && itemMap[n]) {
+              seen.add(n);
+              unique.push({
+                name: n,
+                python_source: (itemMap[n].formats && itemMap[n].formats.python_source) || '',
+                dependencies: graph[n] || [],
+              });
+            }
+          }
+          return { cyclePath: cycle, nodes: unique };
+        }
+      }
+      return null;
+    }
+
+    function parseCircularityFromError(data) {
+      if (!data || data.status !== 'error') return null;
+      const msg = String(data.message || '');
+      const isCycleErr =
+        data.error_type === 'circular_ast_dependency' ||
+        data.error_type === 'CircularDependencyError' ||
+        /circular ast dependency/i.test(msg);
+      if (!isCycleErr) return null;
+
+      if (Array.isArray(data.cycle_path) && Array.isArray(data.cycle_nodes) && data.cycle_nodes.length >= 1) {
+        return { cyclePath: data.cycle_path, nodes: data.cycle_nodes };
+      }
+
+      const fromReg = detectCycleInRegistry(latestSnapshot.items || []);
+      if (fromReg) return fromReg;
+
+      const m = msg.match(/'([A-Za-z_][A-Za-z0-9_]*)'/);
+      const key = m ? m[1] : null;
+      const items = latestSnapshot.items || [];
+      const primary = items.find(i => i.name === key) || items[0];
+      const secondary = items.find(i => i.name !== (primary && primary.name)) || primary;
+      if (!primary) return null;
+
+      const nodes = [primary, secondary].filter(Boolean).map(it => ({
+        name: it.name,
+        python_source: (it.formats && it.formats.python_source) || '',
+        dependencies: it.dependencies || (it.compile_metadata && it.compile_metadata.dependencies) || [],
+      }));
+      return {
+        cyclePath: nodes.length > 1 ? [nodes[0].name, nodes[1].name, nodes[0].name] : [nodes[0].name, nodes[0].name],
+        nodes,
+      };
+    }
+
+    function openCircularityModal(cycleInfo) {
+      if (cycleInfo) {
+        cycleState.active = true;
+        cycleState.cyclePath = cycleInfo.cyclePath;
+        cycleState.nodes = cycleInfo.nodes;
+        cycleState.leftName = cycleInfo.nodes[0].name;
+        cycleState.rightName = (cycleInfo.nodes[1] || cycleInfo.nodes[0]).name;
+      }
+      if (!cycleState.active || !cycleState.nodes.length) return;
+
+      document.getElementById('reopenCycleBtn').style.display = 'inline-block';
+
+      const strip = document.getElementById('cycleChainStrip');
+      strip.innerHTML = '<span>Cycle Path:</span> ' + cycleState.cyclePath
+        .map(n => `<span class="cycle-node-chip">${escapeHtml(n)}</span>`)
+        .join(' <span>&rarr;</span> ');
+
+      const selRow = document.getElementById('cycleSelectorRow');
+      const leftSel = document.getElementById('cycleLeftSelect');
+      const rightSel = document.getElementById('cycleRightSelect');
+      if (cycleState.nodes.length > 2) {
+        selRow.style.display = 'flex';
+        leftSel.innerHTML = cycleState.nodes.map(n => `<option value="${escapeHtml(n.name)}" ${n.name === cycleState.leftName ? 'selected' : ''}>${escapeHtml(n.name)}</option>`).join('');
+        rightSel.innerHTML = cycleState.nodes.map(n => `<option value="${escapeHtml(n.name)}" ${n.name === cycleState.rightName ? 'selected' : ''}>${escapeHtml(n.name)}</option>`).join('');
+      } else {
+        selRow.style.display = 'none';
+      }
+
+      populateSideBySidePanes();
+      document.getElementById('circularityModalBackdrop').classList.add('open');
+    }
+
+    function syncCycleEditorsFromSelect() {
+      cycleState.leftName = document.getElementById('cycleLeftSelect').value;
+      cycleState.rightName = document.getElementById('cycleRightSelect').value;
+      populateSideBySidePanes();
+    }
+
+    function populateSideBySidePanes() {
+      const leftNode = cycleState.nodes.find(n => n.name === cycleState.leftName) || cycleState.nodes[0];
+      const rightNode = cycleState.nodes.find(n => n.name === cycleState.rightName) || cycleState.nodes[1] || leftNode;
+
+      document.getElementById('leftNodeTitle').textContent = leftNode.name;
+      document.getElementById('leftNodeDeps').textContent = 'calls: ' + JSON.stringify(leftNode.dependencies || []);
+      document.getElementById('cycleLeftCode').value = leftNode.python_source || '';
+      syncHighlightedEditor('cycleLeftCode', 'python');
+
+      document.getElementById('rightNodeTitle').textContent = rightNode.name;
+      document.getElementById('rightNodeDeps').textContent = 'calls: ' + JSON.stringify(rightNode.dependencies || []);
+      document.getElementById('cycleRightCode').value = rightNode.python_source || '';
+      syncHighlightedEditor('cycleRightCode', 'python');
+    }
+
+    async function saveAndVerifyCircularity() {
+      if (cycleState.isSaving) return;
+      const leftName = cycleState.leftName;
+      const rightName = cycleState.rightName;
+      const leftCode = document.getElementById('cycleLeftCode').value;
+      const rightCode = document.getElementById('cycleRightCode').value;
+      const statusEl = document.getElementById('cycleStatusBanner');
+      const saveBtn = document.getElementById('cycleSaveVerifyBtn');
+
+      cycleState.isSaving = true;
+      saveBtn.disabled = true;
+      statusEl.className = 'result-banner';
+      statusEl.textContent = 'Saving updated AST nodes and verifying dependency graph...';
+
+      try {
+        const resLeft = await fetch(`/api/ast/${encodeURIComponent(leftName)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/hal+json' },
+          body: JSON.stringify({ code_or_ast: leftCode })
+        }).then(safeParseJsonResponse);
+
+        if (resLeft.status === 'error' && resLeft.error_type !== 'circular_ast_dependency') {
+          statusEl.className = 'result-banner error';
+          statusEl.textContent = `Left node (${leftName}) error: ${resLeft.message}`;
+          return;
+        }
+
+        if (rightName && rightName !== leftName) {
+          const resRight = await fetch(`/api/ast/${encodeURIComponent(rightName)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/hal+json' },
+            body: JSON.stringify({ code_or_ast: rightCode })
+          }).then(safeParseJsonResponse);
+
+          if (resRight.status === 'error' && resRight.error_type !== 'circular_ast_dependency') {
+            statusEl.className = 'result-banner error';
+            statusEl.textContent = `Right node (${rightName}) error: ${resRight.message}`;
+            return;
+          }
+
+          const resLeftRetry = await fetch(`/api/ast/${encodeURIComponent(leftName)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/hal+json' },
+            body: JSON.stringify({ code_or_ast: leftCode })
+          }).then(safeParseJsonResponse);
+
+          const cycleCheck = parseCircularityFromError(resLeftRetry);
+          if (cycleCheck) {
+            statusEl.className = 'result-banner error';
+            statusEl.textContent = `Circularity still present (${cycleCheck.cyclePath.join(' -> ')}). Remove the remaining mutual call to unlock.`;
+            openCircularityModal(cycleCheck);
+            return;
+          }
+        }
+
+        const snap = await fetch('/api/snapshot').then(safeParseJsonResponse);
+        if (snap && Array.isArray(snap.items)) renderSnapshot(snap);
+
+        const remainingCycle = detectCycleInRegistry((snap && snap.items) || []);
+        if (remainingCycle) {
+          statusEl.className = 'result-banner error';
+          statusEl.textContent = `Circularity still present (${remainingCycle.cyclePath.join(' -> ')}). Remove the remaining mutual call to unlock.`;
+          openCircularityModal(remainingCycle);
+          return;
+        }
+
+        const readRes = await fetch('/api/ast', { headers: { 'Accept': 'application/hal+json' } }).then(safeParseJsonResponse);
+        cycleState.active = false;
+        document.getElementById('reopenCycleBtn').style.display = 'none';
+        document.getElementById('circularityModalBackdrop').classList.remove('open');
+        renderResponse(readRes, false);
+      } catch (err) {
+        statusEl.className = 'result-banner error';
+        statusEl.textContent = `Verification request failed: ${err.message}`;
+      } finally {
+        cycleState.isSaving = false;
+        saveBtn.disabled = false;
+      }
+    }
+
+    function updateFormFields() {
+      const tool = document.getElementById('toolSelect').value;
+      const nameWrap = document.getElementById('nameWrap');
+      const argsWrap = document.getElementById('argsWrap');
+      const codeWrap = document.getElementById('codeWrap');
+      const convertWrap = document.getElementById('convertWrap');
+      const skipRoundtripWrap = document.getElementById('skipRoundtripWrap');
+      const nameLabel = document.getElementById('nameLabel');
+      const codeLabel = document.getElementById('codeLabel');
+
+      nameWrap.style.display = (tool === 'ast_chain') ? 'none' : 'block';
+      argsWrap.style.display = (tool === 'eval_ast_call') ? 'block' : 'none';
+      convertWrap.style.display = (tool === 'ast_convert') ? 'flex' : 'none';
+      codeWrap.style.display = (tool === 'ast_create' || tool === 'ast_update' || tool === 'ast_chain' || tool === 'ast_convert') ? 'block' : 'none';
+      skipRoundtripWrap.style.display = (tool === 'ast_create' || tool === 'ast_update') ? 'inline-flex' : 'none';
+
+      if (tool === 'ast_convert') {
+        nameLabel.textContent = 'Model Name (or Saved AST Key if payload empty)';
+        codeLabel.textContent = 'Payload (Saved AST Key, JSON, Schema, Pydantic/Dataclass Code, or AST)';
+      } else {
+        nameLabel.textContent = (tool === 'eval_ast_call') ? 'Target Function or Expression' : 'Function Name (optional for ast_read)';
+        codeLabel.textContent = 'Full-Page Python Script, Single Function, Serialized `ast.dump()`, or JSON AST';
+      }
+
+      if (tool === 'ast_chain' && !document.getElementById('codeInput').value.trim()) {
+        document.getElementById('codeInput').value = JSON.stringify([
+          { tool: "eval_ast_call", arguments: { target: "ast1", args: [4] } },
+          { tool: "eval_ast_call", arguments: { target: "ast2", args: ["$prev"] } }
+        ], null, 2);
+      }
+      syncHighlightedEditor('codeInput', tool === 'ast_chain' ? 'json' : '');
+    }
+
+    function toolStepToHttp(stepObj) {
+      const tool = stepObj.tool || stepObj.action || '';
+      const args = stepObj.arguments || stepObj.args || {};
+      if (tool === 'ast_create') return { method: 'POST', href: '/api/ast', body: args, tool, arguments: args };
+      if (tool === 'ast_update') {
+        const nm = args.name || '';
+        if (!isValidPyIdentifier(nm)) return null;
+        return { method: 'PUT', href: `/api/ast/${encodeURIComponent(nm)}`, body: args, tool, arguments: args };
+      }
+      if (tool === 'ast_read') {
+        const nm = args.name;
+        if (nm && hasUnresolvedTemplate(nm)) return null;
+        return { method: 'GET', href: nm ? `/api/ast/${encodeURIComponent(nm)}` : '/api/ast', body: undefined, tool, arguments: args };
+      }
+      if (tool === 'ast_delete') {
+        const nm = args.name || '';
+        if (!isValidPyIdentifier(nm)) return null;
+        return { method: 'DELETE', href: `/api/ast/${encodeURIComponent(nm)}`, body: undefined, tool, arguments: args };
+      }
+      if (tool === 'eval_ast_call') {
+        const target = args.target || '';
+        if (isValidPyIdentifier(target)) {
+          return {
+            method: 'POST',
+            href: `/api/ast/${encodeURIComponent(target)}/eval`,
+            body: { args: args.args !== undefined ? args.args : [], kwargs: args.kwargs || {} },
+            tool,
+            arguments: args,
+          };
+        }
+        if (!target || hasUnresolvedTemplate(target)) return null;
+        return { method: 'POST', href: '/api/eval', body: args, tool, arguments: args };
+      }
+      if (tool === 'ast_convert') return { method: 'POST', href: '/api/convert', body: args, tool, arguments: args };
+      if (tool === 'ast_install_module') {
+        const mod = args.module_name || '';
+        if (!isValidPyIdentifier(mod)) return null;
+        return { method: 'POST', href: `/api/modules/${encodeURIComponent(mod)}/install`, body: args, tool, arguments: args };
+      }
+      if (tool === 'ast_write_module_file') {
+        const fname = args.filename || '';
+        if (!fname || hasUnresolvedTemplate(fname) || !/^[A-Za-z_][A-Za-z0-9_]*\.py$/.test(fname)) return null;
+        return { method: 'POST', href: '/api/modules/files', body: args, tool, arguments: args };
+      }
+      if (tool === 'ast_chain') return { method: 'POST', href: '/api/chain', body: args, tool, arguments: args };
+      return { method: 'POST', href: '/api/command', body: { tool, arguments: args }, tool, arguments: args };
+    }
+
+    const NAV_ONLY_RELS = new Set([
+      'self', 'resource_self', 'api_root', 'ast_collection', 'cli',
+      'list', 'list_registry', 'inspect_current', 'inspect_existing'
+    ]);
+
+    function extractStepsFromHateoasLink(rel, link) {
+      if (!link || typeof link !== 'object') return [];
+      if (link.templated) return [];
+      if (link.required_params && !link.arguments && !link.body) return [];
+      if (link.href && hasUnresolvedTemplate(link.href)) return [];
+
+      let steps = [];
+      if (link.tool === 'ast_chain' && link.arguments && Array.isArray(link.arguments.commands)) {
+        const mappedSteps = link.arguments.commands.map(cmd => toolStepToHttp(cmd));
+        if (mappedSteps.some(m => m === null)) return [];
+        steps = mappedSteps.map((mapped, idx) => ({
+          index: idx,
+          title: `${mapped.tool} (${mapped.method} ${mapped.href})`,
+          method: mapped.method,
+          href: mapped.href,
+          body: mapped.body,
+          tool: mapped.tool,
+          arguments: mapped.arguments,
+          status: 'pending',
+          statusMessage: 'Pending execution',
+          response: null,
+        }));
+      } else if (link.href && link.method) {
+        if (link.body && typeof link.body === 'object') {
+          if (link.body.filename && hasUnresolvedTemplate(link.body.filename)) return [];
+          if (link.body.module_name && hasUnresolvedTemplate(link.body.module_name)) return [];
+        }
+        steps = [{
+          index: 0,
+          title: `${link.tool || rel} (${link.method} ${link.href})`,
+          method: link.method,
+          href: link.href,
+          body: link.body,
+          tool: link.tool || rel,
+          arguments: link.arguments || link.body || {},
+          status: 'pending',
+          statusMessage: 'Pending execution',
+          response: null,
+        }];
+      } else if (link.tool) {
+        const mapped = toolStepToHttp(link);
+        if (!mapped) return [];
+        steps = [{
+          index: 0,
+          title: `${mapped.tool} (${mapped.method} ${mapped.href})`,
+          method: mapped.method,
+          href: mapped.href,
+          body: mapped.body,
+          tool: mapped.tool,
+          arguments: mapped.arguments,
+          status: 'pending',
+          statusMessage: 'Pending execution',
+          response: null,
+        }];
+      }
+      return steps;
+    }
+
+    function extractHateoasActionTracks(data) {
+      if (!data || typeof data !== 'object' || !data._links) return [];
+      const links = data._links;
+      const tracks = [];
+      const seenRels = new Set();
+
+      for (const [rel, defaultLabel] of ACTIONABLE_RELS) {
+        const steps = extractStepsFromHateoasLink(rel, links[rel]);
+        if (steps.length > 0) {
+          tracks.push({ rel, label: defaultLabel, steps });
+          seenRels.add(rel);
+        }
+      }
+
+      if (data.status === 'error') {
+        for (const [rel, link] of Object.entries(links)) {
+          if (seenRels.has(rel) || NAV_ONLY_RELS.has(rel)) continue;
+          const steps = extractStepsFromHateoasLink(rel, link);
+          if (steps.length > 0) {
+            const label = rel.split('_').map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+            tracks.push({ rel, label: label || rel, steps });
+          }
+        }
+      }
+      return tracks;
+    }
+
+    function computeTracksSignature(tracks) {
+      return JSON.stringify(
+        tracks.map(t => ({
+          rel: t.rel,
+          steps: t.steps.map(s => ({ method: s.method, href: s.href, body: s.body })),
+        }))
+      );
+    }
+
+    function syncWizardWithHateoas(data, shouldAutoPopup = true) {
+      if (cycleState.active) return;
+
+      const tracks = extractHateoasActionTracks(data);
+      const reopenBtn = document.getElementById('reopenWizardBtn');
+
+      if (!tracks.length) {
+        reopenBtn.style.display = 'none';
+        return;
+      }
+
+      reopenBtn.style.display = 'inline-block';
+      const newSig = computeTracksSignature(tracks);
+      const modalEl = document.getElementById('hateoasModalBackdrop');
+      const wasOpen = modalEl.classList.contains('open');
+
+      if (wizardState.signature !== newSig) {
+        const hadPriorActivePlan =
+          wizardState.signature !== null &&
+          !wizardState.completedAll &&
+          wizardState.steps.length > 0;
+
+        wizardState.signature = newSig;
+        wizardState.policy = data.policy || data.error_type || data.status || 'hateoas_transition';
+        wizardState.message = data.message || 'Suggested HATEOAS actions are ready for step-by-step execution.';
+        wizardState.missingDefaultParams = Array.isArray(data.missing_default_params) ? data.missing_default_params : [];
+        wizardState.tracks = tracks;
+        wizardState.selectedTrackIndex = 0;
+        wizardState.steps = tracks[0].steps.map(s => ({ ...s }));
+        wizardState.completedAll = false;
+        wizardState.supersededCount = hadPriorActivePlan ? wizardState.supersededCount + 1 : 0;
+
+        renderHateoasModal();
+        if (shouldAutoPopup || wasOpen) openHateoasModal();
+      } else if (wasOpen) {
+        renderHateoasModal();
+      }
+    }
+
+    function selectWizardTrack(idx) {
+      if (wizardState.isRunningStep) return;
+      if (idx < 0 || idx >= wizardState.tracks.length) return;
+      wizardState.selectedTrackIndex = idx;
+      wizardState.steps = wizardState.tracks[idx].steps.map(s => ({ ...s }));
+      wizardState.completedAll = false;
+      renderHateoasModal();
+    }
+
+    function openHateoasModal() {
+      if (cycleState.active) return;
+      renderHateoasModal();
+      document.getElementById('hateoasModalBackdrop').classList.add('open');
+    }
+
+    function closeHateoasModal() {
+      if (wizardState.isRunningStep) return;
+      document.getElementById('hateoasModalBackdrop').classList.remove('open');
+    }
+
+    function renderHateoasModal() {
+      const titleEl = document.getElementById('hateoasModalTitle');
+      const subEl = document.getElementById('hateoasModalSub');
+      const supBanner = document.getElementById('modalSupersededBanner');
+      const trackSelEl = document.getElementById('modalTrackSelector');
+      const overallEl = document.getElementById('modalOverallStatus');
+      const stepListEl = document.getElementById('modalStepList');
+      const badgeEl = document.getElementById('modalProgressBadge');
+      const nextBtn = document.getElementById('modalNextStepBtn');
+      const allBtn = document.getElementById('modalRunAllBtn');
+      const exitBtn = document.getElementById('modalExitBtn');
+
+      titleEl.textContent = `HATEOAS Suggested Actions (${wizardState.policy})`;
+      subEl.textContent = wizardState.message;
+      supBanner.style.display = wizardState.supersededCount > 0 ? 'block' : 'none';
+
+      trackSelEl.innerHTML = '';
+      if (wizardState.tracks.length > 1) {
+        wizardState.tracks.forEach((tr, idx) => {
+          const btn = document.createElement('button');
+          btn.className = idx === wizardState.selectedTrackIndex ? '' : 'secondary';
+          btn.style.padding = '5px 10px';
+          btn.style.fontSize = '0.78rem';
+          btn.disabled = wizardState.isRunningStep;
+          btn.textContent = `${tr.label} (${tr.steps.length} step${tr.steps.length > 1 ? 's' : ''})`;
+          btn.onclick = () => selectWizardTrack(idx);
+          trackSelEl.appendChild(btn);
+        });
+      }
+
+      const totalSteps = wizardState.steps.length;
+      const doneSteps = wizardState.steps.filter(s => s.status === 'done').length;
+      const failedStep = wizardState.steps.find(s => s.status === 'failed');
+      const nextStepIdx = wizardState.steps.findIndex(s => s.status === 'pending' || s.status === 'failed');
+
+      badgeEl.textContent = `Step ${doneSteps} / ${totalSteps}`;
+
+      if (wizardState.isRunningStep) {
+        overallEl.className = 'result-banner';
+        overallEl.textContent = `Executing step ${nextStepIdx + 1} of ${totalSteps}...`;
+      } else if (failedStep) {
+        overallEl.className = 'result-banner error';
+        overallEl.textContent = `Stopped at Step ${failedStep.index + 1}: ${failedStep.statusMessage}`;
+      } else if (totalSteps > 0 && doneSteps === totalSteps) {
+        overallEl.className = 'result-banner';
+        overallEl.textContent = `All ${totalSteps} HATEOAS step(s) completed successfully. Click Exit to close.`;
+      } else {
+        overallEl.className = 'result-banner';
+        overallEl.textContent = `Edit any suggested input below if needed, then execute Step ${nextStepIdx + 1} of ${totalSteps}.`;
+      }
+
+      stepListEl.innerHTML = '';
+
+      if (wizardState.missingDefaultParams && wizardState.missingDefaultParams.length > 0) {
+        const defBox = document.createElement('div');
+        defBox.className = 'step-card active';
+        defBox.innerHTML = `
+          <div class="step-top">
+            <span class="step-name">Set Default Value(s) for Missing Argument(s)</span>
+            <span class="pill">editable</span>
+          </div>
+        `;
+        wizardState.missingDefaultParams.forEach((p, pIdx) => {
+          const row = document.createElement('div');
+          row.style.marginBottom = '8px';
+          const lbl = document.createElement('label');
+          lbl.textContent = `Default for "${p.name}" (${p.kind}, ${p.annotation})`;
+          const inp = document.createElement('input');
+          inp.type = 'text';
+          inp.id = `modalDefaultInput_${p.name}`;
+          inp.dataset.annotation = String(p.annotation || '');
+          inp.value = p.currentValue !== undefined ? String(p.currentValue) : String(p.suggested_default ?? '');
+          inp.placeholder = 'Enter Python literal default (e.g. 0, 1, "abc", None)';
+          inp.oninput = (e) => {
+            p.currentValue = e.target.value;
+            applyDefaultInputToStepCode(p.name, e.target.value);
+          };
+          row.appendChild(lbl);
+          row.appendChild(inp);
+          defBox.appendChild(row);
+          if (pIdx === 0) setTimeout(() => inp.focus(), 20);
+        });
+        stepListEl.appendChild(defBox);
+      }
+
+      wizardState.steps.forEach((step, idx) => {
+        const isCurrent = idx === nextStepIdx && !wizardState.completedAll;
+        const card = document.createElement('div');
+        card.className = `step-card ${step.status} ${isCurrent ? 'active' : ''}`;
+
+        const pillClass =
+          step.status === 'done' ? 'st-done' :
+          step.status === 'running' ? 'st-running' :
+          step.status === 'failed' ? 'st-failed' : 'st-pending';
+
+        if (step.rawBodyText === undefined) {
+          step.rawBodyText = step.body !== undefined ? JSON.stringify(step.body, null, 2) : '';
+        }
+
+        card.innerHTML = `
+          <div class="step-top">
+            <span class="step-name">Step ${idx + 1}: ${escapeHtml(step.tool || step.title)}</span>
+            <span class="step-status-pill ${pillClass}">${escapeHtml(step.status)}</span>
+          </div>
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px;">
+            ${escapeHtml(step.statusMessage)}
+          </div>
+          <label for="modalStepHref_${idx}">Endpoint (${escapeHtml(step.method)})</label>
+          <input id="modalStepHref_${idx}" type="text" value="${escapeHtml(step.href)}" />
+          <label for="modalStepBody_${idx}">Editable Request JSON Payload</label>
+          <div class="code-editor-wrap">
+            <pre id="modalStepBody_${idx}Highlight" class="code-editor-highlight" aria-hidden="true"></pre>
+            <textarea id="modalStepBody_${idx}" class="code-editor-input" spellcheck="false" style="min-height:105px;">${escapeHtml(step.rawBodyText)}</textarea>
+          </div>
+        `;
+
+        stepListEl.appendChild(card);
+
+        const hrefInput = document.getElementById(`modalStepHref_${idx}`);
+        const bodyTextarea = document.getElementById(`modalStepBody_${idx}`);
+        hrefInput.oninput = (e) => updateStepFieldFromEditor(idx, 'href', e.target.value);
+        bodyTextarea.oninput = (e) => updateStepFieldFromEditor(idx, 'body', e.target.value);
+        bindHighlightedEditor(`modalStepBody_${idx}`, 'json');
+
+        if (step.response) {
+          const outPre = document.createElement('pre');
+          outPre.style.marginTop = '8px';
+          const outText = JSON.stringify({
+            status: step.response.status,
+            result: step.response.result !== undefined ? step.response.result : step.response.message || step.response.status,
+          }, null, 2);
+          outPre.innerHTML = `<span class="tok-comment">// Step Output:</span>\n${highlightJson(outText)}`;
+          card.appendChild(outPre);
+        }
+      });
+
+      const allDone = totalSteps > 0 && doneSteps === totalSteps;
+      wizardState.completedAll = allDone;
+
+      nextBtn.disabled = wizardState.isRunningStep || allDone || nextStepIdx === -1;
+      allBtn.disabled = wizardState.isRunningStep || allDone || nextStepIdx === -1;
+      exitBtn.disabled = wizardState.isRunningStep;
+
+      if (allDone) {
+        nextBtn.style.display = 'none';
+        allBtn.style.display = 'none';
+        exitBtn.className = 'success';
+        exitBtn.textContent = 'Exit (Completed)';
+      } else {
+        nextBtn.style.display = 'inline-block';
+        allBtn.style.display = 'inline-block';
+        nextBtn.textContent = nextStepIdx >= 0 ? `Execute Step ${nextStepIdx + 1}` : 'Execute Next Step';
+        exitBtn.className = 'secondary';
+        exitBtn.textContent = 'Exit';
+      }
+    }
+
+    async function executeNextModalStep() {
+      if (wizardState.isRunningStep) return;
+      const idx = wizardState.steps.findIndex(s => s.status === 'pending' || s.status === 'failed');
+      if (idx === -1) return;
+
+      const step = wizardState.steps[idx];
+      if (step.parseError) {
+        step.status = 'failed';
+        step.statusMessage = step.parseError;
+        renderHateoasModal();
+        return;
+      }
+
+      const capturedSig = wizardState.signature;
+      wizardState.isRunningStep = true;
+      step.status = 'running';
+      step.statusMessage = `Calling ${step.method} ${step.href}...`;
+      renderHateoasModal();
+
+      try {
+        const opts = { method: step.method, headers: { 'Accept': 'application/hal+json' } };
+        if (step.body !== undefined && step.method !== 'GET' && step.method !== 'DELETE') {
+          opts.headers['Content-Type'] = 'application/json';
+          opts.body = JSON.stringify(step.body);
+        }
+
+        const resp = await fetch(step.href, opts);
+        const data = await safeParseJsonResponse(resp);
+
+        await refreshSnapshot();
+        renderResponse(data, false);
+
+        const newTracks = extractHateoasActionTracks(data);
+        const newSig = newTracks.length ? computeTracksSignature(newTracks) : null;
+
+        wizardState.isRunningStep = false;
+
+        if (data.status === 'error') {
+          step.status = 'failed';
+          step.statusMessage = data.message || `Failed (${data.error_type || 'error'})`;
+          step.response = data;
+          if (newSig && newSig !== capturedSig) {
+            syncWizardWithHateoas(data, true);
+            return;
+          }
+        } else {
+          step.status = 'done';
+          const outVal = data.result !== undefined ? `result = ${JSON.stringify(data.result)}` : (data.status || 'ok');
+          step.statusMessage = `Completed (${outVal})`;
+          step.response = data;
+
+          const remainingPending = wizardState.steps.some(s => s.status === 'pending');
+          if (!remainingPending && newSig && newSig !== capturedSig) {
+            wizardState.completedAll = true;
+            syncWizardWithHateoas(data, true);
+            return;
+          }
+        }
+      } catch (err) {
+        wizardState.isRunningStep = false;
+        step.status = 'failed';
+        step.statusMessage = `Network/execution error: ${err}`;
+      }
+
+      renderHateoasModal();
+    }
+
+    async function executeAllRemainingModalSteps() {
+      while (!wizardState.isRunningStep) {
+        const idx = wizardState.steps.findIndex(s => s.status === 'pending' || s.status === 'failed');
+        if (idx === -1) break;
+        const sigBefore = wizardState.signature;
+        await executeNextModalStep();
+        if (wizardState.signature !== sigBefore) break;
+        if (wizardState.steps[idx] && wizardState.steps[idx].status === 'failed') break;
+      }
+    }
+
+    async function followRestLink(method, href, body) {
+      if (hasUnresolvedTemplate(href)) {
+        document.getElementById('resultSummary').className = 'result-banner error';
+        document.getElementById('resultSummary').textContent = `Refusing to call unresolved URI template: ${href}`;
+        return null;
+      }
+      const opts = { method, headers: { 'Accept': 'application/hal+json' } };
+      if (body !== undefined && method !== 'GET' && method !== 'DELETE') {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+      }
+      const resp = await fetch(href, opts);
+      const data = await safeParseJsonResponse(resp);
+
+      await refreshSnapshot();
+      renderResponse(data, true);
+      return data;
+    }
+
+    function parseFlexibleEvalInput(raw) {
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        return raw;
+      }
+    }
+
+    async function runCommand() {
+      const tool = document.getElementById('toolSelect').value;
+      const name = document.getElementById('nameInput').value.trim();
+      const rawCode = document.getElementById('codeInput').value;
+      const rawArgs = document.getElementById('argsInput').value.trim();
+      const skipRoundtrip = document.getElementById('skipRoundtripInput').checked;
+
+      if (tool === 'eval_ast_call') {
+        const parsedPayload = parseFlexibleEvalInput(rawArgs);
+        if (isValidPyIdentifier(name)) {
+          await followRestLink('POST', `/api/ast/${encodeURIComponent(name)}/eval`, parsedPayload);
+        } else {
+          await followRestLink('POST', '/api/eval', { target: name, args: parsedPayload });
+        }
+      } else if (tool === 'ast_create') {
+        await followRestLink('POST', '/api/ast', { name, code_or_ast: rawCode, overwrite: true, skip_roundtrip: skipRoundtrip });
+      } else if (tool === 'ast_update') {
+        await followRestLink('PUT', `/api/ast/${encodeURIComponent(name)}`, { code_or_ast: rawCode, skip_roundtrip: skipRoundtrip });
+      } else if (tool === 'ast_read') {
+        await followRestLink('GET', name ? `/api/ast/${encodeURIComponent(name)}` : '/api/ast');
+      } else if (tool === 'ast_delete') {
+        await followRestLink('DELETE', `/api/ast/${encodeURIComponent(name)}`);
+      } else if (tool === 'ast_chain') {
+        let commands = [];
+        try { commands = JSON.parse(rawCode); } catch (e) {
+          document.getElementById('resultSummary').className = 'result-banner error';
+          document.getElementById('resultSummary').textContent = 'Invalid JSON commands array';
+          return;
+        }
+        await followRestLink('POST', '/api/chain', { commands });
+      } else if (tool === 'ast_convert') {
+        const source_kind = document.getElementById('sourceKindSelect').value;
+        const target_kind = document.getElementById('targetKindSelect').value;
+        await followRestLink('POST', '/api/convert', {
+          source_kind,
+          target_kind,
+          payload: rawCode.trim() || name,
+          model_name: name || 'GeneratedModel'
+        });
+      }
+    }
+
+    async function quickEval(target, arr) {
+      await followRestLink('POST', `/api/ast/${encodeURIComponent(target)}/eval`, arr);
+    }
+
+    function renderResponse(data, triggerHateoasWizard = true) {
+      if (!data) return;
+      document.getElementById('lastResponse').innerHTML = highlightJson(JSON.stringify(data, null, 2));
+
+      const cycleErr = parseCircularityFromError(data);
+      if (cycleErr) {
+        document.getElementById('hateoasModalBackdrop').classList.remove('open');
+        openCircularityModal(cycleErr);
+      }
+
+      const summaryEl = document.getElementById('resultSummary');
+      const stdoutWrap = document.getElementById('stdoutWrap');
+      const stdoutPre = document.getElementById('stdoutPreview');
+      const convWrap = document.getElementById('convertedCodeWrap');
+      const convPre = document.getElementById('convertedCodePreview');
+      const timing = typeof data.duration_ms === 'number' ? ` (${data.duration_ms} ms)` : '';
+
+      if (data.status === 'error') {
+        summaryEl.className = 'result-banner error';
+        summaryEl.textContent = `[ERROR: ${data.error_type || 'error'}] ${data.message || ''}${timing}`;
+      } else if (data.status === 'evaluated_function') {
+        summaryEl.className = 'result-banner';
+        summaryEl.textContent = `EVAL ${data.target}(args=${JSON.stringify(data.args)}, kwargs=${JSON.stringify(data.kwargs || {})}) => ${JSON.stringify(data.result)}${timing}`;
+      } else if (data.status === 'evaluated_expression') {
+        summaryEl.className = 'result-banner';
+        summaryEl.textContent = `EVAL ${data.expression_source} => ${JSON.stringify(data.result)}${timing}`;
+      } else if (data.status === 'converted') {
+        summaryEl.className = 'result-banner';
+        summaryEl.textContent = `CONVERTED ${data.source_kind} -> ${data.target_kind} (${data.model_name || data.function_name || 'ok'})`;
+      } else if (data.status === 'line_generated') {
+        summaryEl.className = 'result-banner';
+        summaryEl.textContent = `GEMINI LINE (${data.model || 'gemini-4-hydrogen'}): ${data.line || ''}${data.explanation ? ' — ' + data.explanation : ''}`;
+      } else if (data.status === 'tests_passed' || data.status === 'tests_failed') {
+        summaryEl.className = data.status === 'tests_failed' ? 'result-banner error' : 'result-banner';
+        summaryEl.textContent = `TESTS ${data.name}: ${data.passed}/${data.total} passed`;
+      } else if (data.status === 'diff_preview') {
+        summaryEl.className = 'result-banner';
+        summaryEl.textContent = `DIFF PREVIEW (${data.name}): ${data.has_changes ? 'Changes detected' : 'No changes'}`;
+      } else if (data.status === 'rolled_back') {
+        summaryEl.className = 'result-banner';
+        summaryEl.textContent = `ROLLED BACK ${data.name} to v${data.restored_from_version} (now v${data.version})`;
+      } else {
+        summaryEl.className = 'result-banner';
+        summaryEl.textContent = `STATUS: ${data.status || 'ok'}${data.name ? ' (' + data.name + ')' : ''}${timing}`;
+      }
+
+      if (data.stdout) {
+        stdoutWrap.style.display = 'block';
+        stdoutPre.textContent = data.stdout;
+      } else {
+        stdoutWrap.style.display = 'none';
+      }
+
+      if (data.unified_diff) {
+        convWrap.style.display = 'block';
+        convPre.textContent = data.unified_diff;
+      } else if (data.pytest_source) {
+        convWrap.style.display = 'block';
+        convPre.innerHTML = highlightPython(data.pytest_source);
+      } else if (data.python_source) {
+        convWrap.style.display = 'block';
+        convPre.innerHTML = highlightPython(data.python_source);
+      } else if (data.line) {
+        convWrap.style.display = 'block';
+        convPre.innerHTML = highlightCodeByFormat(data.line);
+      } else if (data.json_schema) {
+        convWrap.style.display = 'block';
+        convPre.innerHTML = highlightJson(JSON.stringify(data.json_schema, null, 2));
+      } else if (data.recommended_module_script && data.recommended_module_script.python_source) {
+        convWrap.style.display = 'block';
+        convPre.innerHTML = highlightPython(data.recommended_module_script.python_source);
+      } else {
+        convWrap.style.display = 'none';
+      }
+
+      const slot = document.getElementById('recoverySlot');
+      slot.innerHTML = '';
+
+      if (cycleErr) {
+        const fixCycleBtn = document.createElement('button');
+        fixCycleBtn.className = 'danger';
+        fixCycleBtn.textContent = `Resolve Cycle (${cycleErr.cyclePath.join(' -> ')})`;
+        fixCycleBtn.onclick = () => openCircularityModal(cycleErr);
+        slot.appendChild(fixCycleBtn);
+      }
+
+      const tracks = extractHateoasActionTracks(data);
+      if (tracks.length > 0 && !cycleErr) {
+        const modalBtn = document.createElement('button');
+        modalBtn.className = 'warn';
+        modalBtn.textContent = `Step-by-Step HATEOAS Modal (${tracks[0].steps.length} step${tracks[0].steps.length > 1 ? 's' : ''})`;
+        modalBtn.onclick = () => {
+          syncWizardWithHateoas(data, true);
+          openHateoasModal();
+        };
+        slot.appendChild(modalBtn);
+      }
+
+      if (triggerHateoasWizard && !cycleErr) {
+        syncWizardWithHateoas(data, true);
+      }
+    }
+
+    function summarizeEventOutput(ev) {
+      const r = ev.result || {};
+      if (r.status === 'evaluated_function' || r.status === 'evaluated_expression') {
+        return `result = ${JSON.stringify(r.result)}`;
+      }
+      if (r.status === 'converted') {
+        return `converted ${r.source_kind} -> ${r.target_kind} (${r.model_name || r.function_name || ''})`;
+      }
+      if (r.status === 'error') {
+        return `error (${r.error_type}): ${r.message || ''}`;
+      }
+      return `status = ${r.status || ev.status}`;
+    }
+
+    function renderSnapshot(snap) {
+      latestSnapshot = snap;
+      const items = snap.items || [];
+      const events = snap.events || [];
+      document.getElementById('fnCount').textContent = items.length;
+
+      const regCycle = detectCycleInRegistry(items);
+      if (regCycle && !cycleState.isSaving && !cycleState.active) {
+        openCircularityModal(regCycle);
+      }
+
+      const regEl = document.getElementById('registryList');
+      regEl.innerHTML = '';
+      for (const item of items) {
+        const tab = activeFormatTab[item.name] || 'python_source';
+        const div = document.createElement('div');
+        div.className = 'fn-item';
+
+        const content = tab === 'json_ast'
+          ? JSON.stringify(item.formats.json_ast, null, 2)
+          : item.formats[tab];
+
+        const m = item.metrics || {};
+        const metricsStr = m.cyclomatic_complexity !== undefined
+          ? `<span class="pill">CC=${escapeHtml(m.cyclomatic_complexity)} &bull; ${escapeHtml(m.type_coverage_pct)}% typed</span>`
+          : '';
+        const verPill = item.history_count ? `<span class="pill">v${escapeHtml(item.history_count)}</span>` : '';
+        div.innerHTML = `
+          <div class="fn-header">
+            <div>
+              <span class="fn-title">${escapeHtml(item.name)}</span>
+              <span class="pill">${item.compiled ? 'compiled' : 'uncompiled'}</span>
+              ${metricsStr}
+              ${verPill}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="secondary" style="padding:4px 8px;font-size:0.75rem;" data-action="test" data-name="${escapeHtml(item.name)}">Test</button>
+              <button class="secondary" style="padding:4px 8px;font-size:0.75rem;" data-action="analyze" data-name="${escapeHtml(item.name)}">Pytest</button>
+              <button class="secondary" style="padding:4px 8px;font-size:0.75rem;" data-action="rollback" data-name="${escapeHtml(item.name)}">Undo</button>
+              <button class="secondary" style="padding:4px 8px;font-size:0.75rem;" data-action="edit" data-name="${escapeHtml(item.name)}">Edit</button>
+              <button class="secondary" style="padding:4px 8px;font-size:0.75rem;" data-action="eval" data-name="${escapeHtml(item.name)}">Eval(3)</button>
+              <button class="danger" style="padding:4px 8px;font-size:0.75rem;" data-action="delete" data-name="${escapeHtml(item.name)}">Del</button>
+            </div>
+          </div>
+          <div class="tabs">
+            ${['python_source', 'serialized_ast', 'pretty_ast', 'json_ast'].map(fmt => `
+              <button class="tab-btn ${tab === fmt ? 'active' : ''}" data-action="tab" data-name="${escapeHtml(item.name)}" data-fmt="${escapeHtml(fmt)}">${escapeHtml(fmt)}</button>
+            `).join('')}
+          </div>
+          <pre>${highlightCodeByFormat(content, tab)}</pre>
+        `;
+        regEl.appendChild(div);
+      }
+
+      const evEl = document.getElementById('eventList');
+      evEl.innerHTML = '';
+      for (const ev of [...events].reverse()) {
+        const div = document.createElement('div');
+        const srcLower = String(ev.source || '').toLowerCase();
+        const cls = ev.status === 'error' ? 'error' : (srcLower === 'stdin' ? 'stdin' : (srcLower.startsWith('mcp') || srcLower === 'gemini_mcp' ? 'mcp' : ''));
+        div.className = `event-entry ${cls}`;
+        div.onclick = () => renderResponse(ev.result, true);
+        div.innerHTML = `
+          <div class="event-meta">
+            <span>#${escapeHtml(ev.id)} [SRC:${escapeHtml(String(ev.source || '').toUpperCase())}] &rarr; [ROUTE:${escapeHtml(ev.route || 'RUNTIME')}] <strong>${escapeHtml(ev.tool)}</strong></span>
+            <span>${escapeHtml(ev.timestamp)} &bull; ${escapeHtml(ev.status)}</span>
+          </div>
+          <div style="font-family:var(--mono);font-size:0.76rem;color:var(--muted);">
+            args: ${escapeHtml(JSON.stringify(ev.arguments))}
+          </div>
+          <div style="font-family:var(--mono);font-size:0.78rem;font-weight:600;color:${ev.status === 'error' ? '#b91c1c' : '#15803d'};margin-top:3px;">
+            ${escapeHtml(summarizeEventOutput(ev))}
+          </div>
+        `;
+        evEl.appendChild(div);
+      }
+
+      if (events.length) {
+        const newest = events[events.length - 1];
+        if (newest.id && newest.id > lastSeenEventId) {
+          lastSeenEventId = newest.id;
+          if (newest.result) {
+            renderResponse(newest.result, !wizardState.isRunningStep);
+          }
+        }
+      }
+    }
+
+    document.getElementById('registryList').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const name = btn.dataset.name;
+      if (action === 'convert') {
+        followRestLink('POST', '/api/convert', { source_kind: 'saved_ast', target_kind: 'pydantic', payload: name });
+      } else if (action === 'test') {
+        followRestLink('POST', `/api/ast/${encodeURIComponent(name)}/test`, {});
+      } else if (action === 'analyze') {
+        followRestLink('GET', `/api/ast/${encodeURIComponent(name)}/analyze`);
+      } else if (action === 'rollback') {
+        followRestLink('POST', `/api/ast/${encodeURIComponent(name)}/rollback`, {});
+      } else if (action === 'edit') {
+        loadIntoEditor(name);
+      } else if (action === 'eval') {
+        quickEval(name, [3]);
+      } else if (action === 'delete') {
+        followRestLink('DELETE', `/api/ast/${encodeURIComponent(name)}`);
+      } else if (action === 'tab') {
+        setTab(name, btn.dataset.fmt);
+      }
+    });
+
+    function setTab(name, fmt) {
+      activeFormatTab[name] = fmt;
+      renderSnapshot(latestSnapshot);
+    }
+
+    function loadIntoEditor(name) {
+      const found = (latestSnapshot.items || []).find(i => i.name === name);
+      if (!found) return;
+      document.getElementById('toolSelect').value = 'ast_update';
+      updateFormFields();
+      document.getElementById('nameInput').value = name;
+      document.getElementById('codeInput').value = found.formats.python_source;
+      syncHighlightedEditor('codeInput', 'python');
+    }
+
+    async function refreshSnapshot() {
+      try {
+        const resp = await fetch('/api/snapshot');
+        const snap = await safeParseJsonResponse(resp);
+        if (snap && Array.isArray(snap.items)) renderSnapshot(snap);
+        const toolsResp = await fetch('/api/mcp/tools');
+        const toolsData = await safeParseJsonResponse(toolsResp);
+        if (toolsData && Array.isArray(toolsData.tools)) {
+          latestMcpTools = toolsData.tools;
+          const badge = document.getElementById('mcpToolCountBadge');
+          if (badge) badge.textContent = `${latestMcpTools.length} MCP tools live`;
+        }
+      } catch (e) {}
+    }
+
+    function startFallbackPolling() {
+      if (!fallbackPollTimer) {
+        fallbackPollTimer = setInterval(refreshSnapshot, 1500);
+      }
+    }
+
+    function stopFallbackPolling() {
+      if (fallbackPollTimer) {
+        clearInterval(fallbackPollTimer);
+        fallbackPollTimer = null;
+      }
+    }
+
+    function connectSSE() {
+      const es = new EventSource('/api/events');
+      es.onmessage = (evt) => {
+        const msg = JSON.parse(evt.data);
+        if (msg.snapshot) renderSnapshot(msg.snapshot);
+        if (msg.event && msg.event.result) {
+          if (msg.event.id && msg.event.id > lastSeenEventId) {
+            lastSeenEventId = msg.event.id;
+          }
+          renderResponse(msg.event.result, !wizardState.isRunningStep);
+        }
+      };
+      es.onerror = () => {
+        document.getElementById('connStatus').textContent = 'Live Sync (Polling)';
+        startFallbackPolling();
+      };
+      es.onopen = () => {
+        document.getElementById('connStatus').textContent = 'Connected (SSE Live)';
+        stopFallbackPolling();
+      };
+    }
+
+    (function initAutocompleteEngine() {
+      const popup = document.getElementById('acPopup');
+      let activeEl = null;
+      let currentItems = [];
+      let selectedIdx = 0;
+
+      function getTargetFnMeta(targetName) {
+        const items = (latestSnapshot && latestSnapshot.items) || [];
+        const match = items.find(i => i.name === targetName);
+        if (!match) return null;
+        const src = (match.formats && match.formats.python_source) || '';
+        const fnMatch = src.match(/^\s*def\s+[A-Za-z_][A-Za-z0-9_]*\s*\(([^)]*)\)/m);
+        const params = [];
+        if (fnMatch && fnMatch[1].trim()) {
+          for (const rawPart of fnMatch[1].split(',')) {
+            const cleaned = rawPart.trim();
+            if (!cleaned || cleaned.startsWith('*')) continue;
+            const [left, defPart] = cleaned.split('=');
+            const paramName = left.split(':')[0].trim();
+            const typeHint = (left.split(':')[1] || '').trim();
+            if (paramName) {
+              params.push({
+                name: paramName,
+                type: typeHint,
+                hasDefault: defPart !== undefined,
+                defaultRaw: defPart ? defPart.trim() : undefined,
+              });
+            }
+          }
+        }
+        return { name: match.name, params, source: src };
+      }
+
+      function sampleValueForParam(param, idx) {
+        if (param.hasDefault && param.defaultRaw) {
+          try {
+            return JSON.parse(param.defaultRaw.replace(/'/g, '"'));
+          } catch (_) {
+            if (/^-?\d+(\.\d+)?$/.test(param.defaultRaw)) return Number(param.defaultRaw);
+          }
+        }
+        const t = (param.type || '').toLowerCase();
+        if (t.includes('float')) return 2.5 + idx;
+        if (t.includes('int')) return 3 + idx;
+        if (t.includes('bool')) return true;
+        if (t.includes('str')) return `sample_${idx + 1}`;
+        if (t.includes('list')) return [1, 2];
+        if (t.includes('dict')) return { k: 1 };
+        return 3 + idx;
+      }
+
+      function buildArgsSuggestions(el) {
+        const targetVal = (document.getElementById('nameInput')?.value || '').trim();
+        const meta = getTargetFnMeta(targetVal);
+        const suggestions = [];
+
+        if (meta && meta.params.length > 0) {
+          const posSamples = meta.params.map((p, i) => sampleValueForParam(p, i));
+          const objSample = {};
+          meta.params.forEach((p, i) => { objSample[p.name] = posSamples[i]; });
+
+          suggestions.push({ insert: JSON.stringify(posSamples), label: JSON.stringify(posSamples), meta: `${meta.name} list args` });
+          suggestions.push({ insert: JSON.stringify(objSample), label: JSON.stringify(objSample), meta: `${meta.name} object kwargs` });
+          if (posSamples.length === 1) {
+            suggestions.push({ insert: JSON.stringify(posSamples[0]), label: JSON.stringify(posSamples[0]), meta: 'literal arg' });
+          }
+          suggestions.push({ insert: JSON.stringify([posSamples[0], { extra_kw: 1 }]), label: JSON.stringify([posSamples[0], { extra_kw: 1 }]), meta: 'list + object' });
+        }
+
+        const defaults = [
+          { insert: '3', label: '3', meta: 'literal int' },
+          { insert: '[3, 4]', label: '[3, 4]', meta: 'list args' },
+          { insert: '[3, {"k": 1}]', label: '[3, {"k": 1}]', meta: 'list + object' },
+          { insert: '{"x": 3}', label: '{"x": 3}', meta: 'object kwargs' },
+          { insert: '[]', label: '[]', meta: 'empty args' },
+        ];
+        for (const d of defaults) {
+          if (!suggestions.some(s => s.label === d.label)) suggestions.push(d);
+        }
+
+        const q = (el.value || '').trim().toLowerCase();
+        return q ? suggestions.filter(s => s.label.toLowerCase().includes(q) || s.meta.toLowerCase().includes(q)) : suggestions;
+      }
+
+      function buildNameSuggestions(el) {
+        const tool = document.getElementById('toolSelect')?.value || '';
+        const regNames = ((latestSnapshot && latestSnapshot.items) || []).map(i => i.name);
+        const pool = [];
+
+        for (const nm of regNames) {
+          pool.push({ insert: nm, label: nm, meta: 'AST fn' });
+          if (tool === 'eval_ast_call') pool.push({ insert: `${nm}(3)`, label: `${nm}(3)`, meta: 'expr call' });
+        }
+        if (tool === 'eval_ast_call') pool.push({ insert: 'ast1(4) + ast2(2)', label: 'ast1(4) + ast2(2)', meta: 'expr' });
+
+        const q = (el.value || '').trim().toLowerCase();
+        return q ? pool.filter(p => p.label.toLowerCase().includes(q)) : pool;
+      }
+
+      function getCaretTokenRange(el) {
+        const start = el.selectionStart ?? el.value.length;
+        const before = el.value.slice(0, start);
+        const match = before.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+        return {
+          token: match ? match[0] : '',
+          tokenStart: match ? start - match[0].length : start,
+          caretPos: start,
+        };
+      }
+
+      function buildTextareaSuggestions(el, token) {
+        const regNames = ((latestSnapshot && latestSnapshot.items) || []).map(i => i.name);
+        const snippets = [
+          { insert: 'def fn(x: int = 3) -> int:\n    return x * 2', label: 'def fn(x: int = 3) -> int: ...', meta: 'snippet' },
+          { insert: 'return ', label: 'return ...', meta: 'keyword' },
+          { insert: 'import math', label: 'import math', meta: 'import' },
+          {
+            insert: JSON.stringify([{ tool: 'eval_ast_call', arguments: { target: regNames[0] || 'entrypoint', args: [3] } }], null, 2),
+            label: 'chain step template',
+            meta: 'ast_chain',
+          },
+        ];
+
+        for (const nm of regNames) {
+          snippets.push({ insert: nm, label: nm, meta: 'AST symbol' });
+          snippets.push({ insert: `${nm}(3)`, label: `${nm}(3)`, meta: 'AST call' });
+        }
+
+        const q = token.toLowerCase();
+        return q
+          ? snippets.filter(s => s.label.toLowerCase().includes(q) || s.insert.toLowerCase().includes(q))
+          : snippets;
+      }
+
+      function positionPopupNearElement(el, tokenStart) {
+        const rect = el.getBoundingClientRect();
+        let left = rect.left + 8;
+        let top = rect.bottom + 4;
+
+        if (el.tagName === 'TEXTAREA') {
+          const linesBefore = el.value.slice(0, tokenStart ?? el.selectionStart ?? 0).split('\n');
+          const lineIdx = Math.max(0, linesBefore.length - 1);
+          const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20;
+          const approxY = rect.top + 10 + lineIdx * lineHeight - el.scrollTop;
+          top = Math.min(window.innerHeight - 270, Math.max(rect.top + 22, approxY + lineHeight));
+          left = Math.min(window.innerWidth - 320, rect.left + 12);
+        }
+
+        if (top + 240 > window.innerHeight) top = Math.max(8, rect.top - 246);
+        popup.style.left = `${Math.max(8, left)}px`;
+        popup.style.top = `${Math.max(8, top)}px`;
+      }
+
+      let userNavigated = false;
+
+      function buildLinePromptSuggestions(el) {
+        const targetVal = (document.getElementById('nameInput')?.value || '').trim();
+        const items = (latestSnapshot && latestSnapshot.items) || [];
+        const otherFn = (items.find(i => i.name !== targetVal) || items[0] || {}).name || 'ast1';
+        const pool = [
+          { insert: `return ${otherFn}(n) + 1`, label: `return ${otherFn}(n) + 1`, meta: 'call AST fn' },
+          { insert: 'validate input >= 0 else raise ValueError', label: 'validate input >= 0 else raise ValueError', meta: 'guard' },
+          { insert: 'print debug trace before return', label: 'print debug trace before return', meta: 'stdout log' },
+          { insert: 'handle None fallback safely', label: 'handle None fallback safely', meta: 'null-safe' },
+          { insert: 'loop and accumulate sum', label: 'loop and accumulate sum', meta: 'loop' },
+        ];
+        const q = (el.value || '').trim().toLowerCase();
+        return q ? pool.filter(s => s.label.toLowerCase().includes(q) || s.meta.toLowerCase().includes(q)) : pool;
+      }
+
+      function buildGeminiChatSuggestions(el) {
+        const items = (latestSnapshot && latestSnapshot.items) || [];
+        const primary = (items.find(i => i.name === 'entrypoint') || items[0] || {}).name || 'entrypoint';
+        const pool = [
+          { insert: `List registered AST functions and analyze ${primary} metrics`, label: `List registered AST functions and analyze ${primary} metrics`, meta: 'workflow' },
+          { insert: `Run smoke tests on ${primary} and evaluate ${primary}(4)`, label: `Run smoke tests on ${primary} and evaluate ${primary}(4)`, meta: 'test & eval' },
+          { insert: 'Create a fibonacci(n: int) AST function and test it with n=6', label: 'Create a fibonacci(n: int) AST function and test it with n=6', meta: 'create + test' },
+        ];
+        for (const t of (latestMcpTools || [])) {
+          pool.push({
+            insert: `Call MCP tool ${t.name}`,
+            label: `${t.name} — ${String(t.description || '').slice(0, 44)}`,
+            meta: t.dynamic_ast_function ? 'AST tool' : 'MCP tool',
+          });
+        }
+        const raw = (el.value || '').trim().toLowerCase();
+        const q = raw.startsWith('/') ? raw.slice(1) : raw;
+        return q ? pool.filter(s => s.label.toLowerCase().includes(q) || s.insert.toLowerCase().includes(q)) : pool;
+      }
+
+      function buildModalHrefSuggestions(el) {
+        const items = (latestSnapshot && latestSnapshot.items) || [];
+        const pool = [
+          { insert: '/api/ast', label: '/api/ast', meta: 'POST / GET' },
+          { insert: '/api/chain', label: '/api/chain', meta: 'POST chain' },
+          { insert: '/api/eval', label: '/api/eval', meta: 'POST expr' },
+          { insert: '/api/convert', label: '/api/convert', meta: 'POST convert' },
+          { insert: '/api/modules/files', label: '/api/modules/files', meta: 'POST module' },
+        ];
+        for (const it of items) {
+          pool.push({ insert: `/api/ast/${it.name}`, label: `/api/ast/${it.name}`, meta: 'PUT / GET' });
+          pool.push({ insert: `/api/ast/${it.name}/eval`, label: `/api/ast/${it.name}/eval`, meta: 'POST eval' });
+        }
+        const q = (el.value || '').trim().toLowerCase();
+        return q ? pool.filter(s => s.label.toLowerCase().includes(q)) : pool;
+      }
+
+      function buildModalDefaultSuggestions(el) {
+        const ann = (el.dataset && el.dataset.annotation ? el.dataset.annotation : '').toLowerCase();
+        const pool = ann.includes('int')
+          ? [{ insert: '0', label: '0', meta: 'int' }, { insert: '1', label: '1', meta: 'int' }, { insert: '3', label: '3', meta: 'int' }, { insert: 'None', label: 'None', meta: 'optional' }]
+          : [{ insert: 'None', label: 'None', meta: 'optional' }, { insert: '0', label: '0', meta: 'int' }, { insert: '1', label: '1', meta: 'int' }, { insert: '""', label: '""', meta: 'str' }, { insert: 'True', label: 'True', meta: 'bool' }];
+        const q = (el.value || '').trim().toLowerCase();
+        return q ? pool.filter(s => s.label.toLowerCase().includes(q)) : pool;
+      }
+
+      function buildModalJsonBodySuggestions(token) {
+        const items = (latestSnapshot && latestSnapshot.items) || [];
+        const pool = [
+          { insert: '"code_or_ast"', label: '"code_or_ast"', meta: 'JSON key' },
+          { insert: '"name"', label: '"name"', meta: 'JSON key' },
+          { insert: '"args"', label: '"args"', meta: 'JSON key' },
+          { insert: '"kwargs"', label: '"kwargs"', meta: 'JSON key' },
+          { insert: '"skip_roundtrip": true', label: '"skip_roundtrip": true', meta: 'flag' },
+          { insert: '"overwrite": true', label: '"overwrite": true', meta: 'flag' },
+          { insert: 'true', label: 'true', meta: 'bool' },
+          { insert: 'false', label: 'false', meta: 'bool' },
+          { insert: 'null', label: 'null', meta: 'null' },
+          ...items.map(it => ({ insert: `"${it.name}"`, label: `"${it.name}"`, meta: 'AST target' })),
+        ];
+        const q = token.toLowerCase();
+        return q ? pool.filter(s => s.label.toLowerCase().includes(q)) : pool;
+      }
+
+      function hidePopup() {
+        popup.classList.remove('open');
+        activeEl = null;
+        currentItems = [];
+        selectedIdx = 0;
+        userNavigated = false;
+      }
+
+      function applySuggestion(item) {
+        if (!activeEl || !item) return;
+        const el = activeEl;
+        if (el.tagName === 'TEXTAREA') {
+          const { tokenStart, caretPos } = getCaretTokenRange(el);
+          el.value = el.value.slice(0, tokenStart) + item.insert + el.value.slice(caretPos);
+          const newPos = tokenStart + item.insert.length;
+          el.setSelectionRange(newPos, newPos);
+        } else {
+          el.value = item.insert;
+        }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        hidePopup();
+        el.focus();
+      }
+
+      function renderPopup(el) {
+        let items = [];
+        let tokenStart = null;
+        if (el.id === 'argsInput') items = buildArgsSuggestions(el);
+        else if (el.id === 'nameInput') items = buildNameSuggestions(el);
+        else if (el.id === 'geminiLinePrompt') items = buildLinePromptSuggestions(el);
+        else if (el.id === 'geminiChatInput') items = buildGeminiChatSuggestions(el);
+        else if (el.id && el.id.startsWith('modalStepHref_')) items = buildModalHrefSuggestions(el);
+        else if (el.id && el.id.startsWith('modalDefaultInput_')) items = buildModalDefaultSuggestions(el);
+        else if (el.tagName === 'TEXTAREA') {
+          const range = getCaretTokenRange(el);
+          tokenStart = range.tokenStart;
+          if (el.id && el.id.startsWith('modalStepBody_')) {
+            items = buildModalJsonBodySuggestions(range.token);
+          } else {
+            items = buildTextareaSuggestions(el, range.token);
+          }
+        }
+
+        if (!items.length) {
+          hidePopup();
+          return;
+        }
+
+        activeEl = el;
+        currentItems = items.slice(0, 12);
+        selectedIdx = Math.min(selectedIdx, currentItems.length - 1);
+
+        popup.innerHTML = '';
+        currentItems.forEach((it, idx) => {
+          const row = document.createElement('div');
+          row.className = `ac-item ${idx === selectedIdx ? 'selected' : ''}`;
+          row.setAttribute('role', 'option');
+          row.innerHTML = `<span class="ac-label">${escapeHtml(it.label)}</span><span class="ac-meta">${escapeHtml(it.meta)}</span>`;
+          row.onmousedown = (e) => {
+            e.preventDefault();
+            applySuggestion(it);
+          };
+          popup.appendChild(row);
+        });
+
+        positionPopupNearElement(el, tokenStart);
+        popup.classList.add('open');
+      }
+
+      function isEditableInputOrTextarea(el) {
+        if (!el) return false;
+        if (el.tagName === 'TEXTAREA') return true;
+        if (el.tagName === 'INPUT') {
+          const t = (el.type || 'text').toLowerCase();
+          return t !== 'checkbox' && t !== 'radio' && t !== 'button' && t !== 'submit';
+        }
+        return false;
+      }
+
+      document.addEventListener('focusin', (e) => {
+        const el = e.target;
+        if (!isEditableInputOrTextarea(el)) return;
+        selectedIdx = 0;
+        userNavigated = false;
+        if (el.tagName === 'INPUT') {
+          renderPopup(el);
+        } else {
+          const range = getCaretTokenRange(el);
+          if (range.token.length >= 1) renderPopup(el);
+        }
+      });
+
+      document.addEventListener('input', (e) => {
+        const el = e.target;
+        if (!isEditableInputOrTextarea(el)) return;
+        selectedIdx = 0;
+        userNavigated = false;
+        if (el.tagName === 'TEXTAREA') {
+          const range = getCaretTokenRange(el);
+          if (range.token.length >= 1) renderPopup(el);
+          else hidePopup();
+        } else {
+          renderPopup(el);
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        const el = e.target;
+        if (isEditableInputOrTextarea(el) && el.tagName === 'INPUT') {
+          renderPopup(el);
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        const el = e.target;
+        if (!isEditableInputOrTextarea(el)) return;
+        if (!popup.classList.contains('open')) {
+          if (e.ctrlKey && e.code === 'Space') {
+            e.preventDefault();
+            userNavigated = true;
+            renderPopup(el);
+          }
+          return;
+        }
+        const submitsOnEnter = el.id === 'geminiLinePrompt' || el.id === 'geminiChatInput';
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          selectedIdx = (selectedIdx + 1) % currentItems.length;
+          userNavigated = true;
+          renderPopup(el);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          selectedIdx = (selectedIdx - 1 + currentItems.length) % currentItems.length;
+          userNavigated = true;
+          renderPopup(el);
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          applySuggestion(currentItems[selectedIdx] || currentItems[0]);
+        } else if (e.key === 'Enter' && el.tagName !== 'TEXTAREA' && (!submitsOnEnter || userNavigated)) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          applySuggestion(currentItems[selectedIdx] || currentItems[0]);
+        } else if (e.key === 'Enter' && el.tagName === 'TEXTAREA' && userNavigated) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          applySuggestion(currentItems[selectedIdx] || currentItems[0]);
+        } else if (e.key === 'Escape') {
+          hidePopup();
+        }
+      }, true);
+
+      document.addEventListener('focusout', (e) => {
+        if (isEditableInputOrTextarea(e.target)) {
+          setTimeout(hidePopup, 120);
+        }
+      });
+    })();
+
+    async function generateLineIntoEditor(targetTextareaId = 'codeInput') {
+      const ta = document.getElementById(targetTextareaId);
+      const promptEl = document.getElementById('geminiLinePrompt');
+      const btn = document.getElementById('geminiLineBtn');
+      const summaryEl = document.getElementById('resultSummary');
+      if (!ta) return;
+
+      const start = ta.selectionStart ?? ta.value.length;
+      const end = ta.selectionEnd ?? start;
+      const prefix = ta.value.slice(0, start);
+      const suffix = ta.value.slice(end);
+      const targetName = (document.getElementById('nameInput')?.value || '').trim();
+      const tool = document.getElementById('toolSelect')?.value || '';
+      const language = tool === 'ast_chain' ? 'json' : 'python';
+      const prompt = (promptEl?.value || '').trim() || 'Suggest the next line of code at the cursor.';
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+      }
+      try {
+        const resp = await fetch('/api/gemini/generate-line', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/hal+json' },
+          body: JSON.stringify({ prompt, prefix, suffix, target_name: targetName, language }),
+        });
+        const data = await safeParseJsonResponse(resp);
+        renderResponse(data, false);
+        if (resp.ok && data && typeof data.line === 'string' && data.line.length > 0) {
+          const curLinePrefix = prefix.slice(prefix.lastIndexOf('\n') + 1);
+          const needsIndent = curLinePrefix.trim() === '' && !/^[ \t]/.test(data.line) && curLinePrefix.length === 0;
+          const prevLines = prefix.split('\n');
+          const prevNonEmpty = [...prevLines].reverse().find(l => l.trim().length > 0) || '';
+          const prevIndentMatch = prevNonEmpty.match(/^([ \t]*)/);
+          const inferredIndent = prevNonEmpty.trim().endsWith(':')
+            ? `${prevIndentMatch ? prevIndentMatch[1] : ''}    `
+            : (prevIndentMatch ? prevIndentMatch[1] : '');
+          const insertText = (needsIndent ? inferredIndent : '') + data.line;
+          ta.value = prefix + insertText + suffix;
+          const nextPos = start + insertText.length;
+          ta.setSelectionRange(nextPos, nextPos);
+          syncHighlightedEditor(targetTextareaId, language === 'json' ? 'json' : 'python');
+          ta.focus();
+        }
+      } catch (err) {
+        if (summaryEl) {
+          summaryEl.className = 'result-banner error';
+          summaryEl.textContent = `[ERROR] Gemini line generation failed: ${err.message}`;
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Generate Line';
+        }
+      }
+    }
+
+    const chatTranscript = [];
+
+    function appendChatEntry(role, text, traces, isError) {
+      chatTranscript.push({ role, text, traces: traces || [], isError: Boolean(isError) });
+      const box = document.getElementById('geminiChatTranscript');
+      if (!box) return;
+      box.style.display = 'block';
+      box.innerHTML = chatTranscript.map((m) => {
+        const bg = m.role === 'user' ? '#e0f2fe' : (m.isError ? '#fee2e2' : '#ffffff');
+        const traceHtml = (m.traces || []).map((t) =>
+          `<div style="font-family:var(--mono);font-size:0.72rem;color:#475569;margin-top:4px;">&#x2192; <strong>${escapeHtml(t.tool)}</strong>(${escapeHtml(JSON.stringify(t.arguments))}) [${escapeHtml(t.status)}]</div>`
+        ).join('');
+        return `<div style="background:${bg};border:1px solid var(--border-soft);border-radius:6px;padding:8px;margin-bottom:6px;">
+          <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);text-transform:uppercase;">${escapeHtml(m.role)}</div>
+          <div style="white-space:pre-wrap;">${escapeHtml(m.text)}</div>
+          ${traceHtml}
+        </div>`;
+      }).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendGeminiChat() {
+      const inp = document.getElementById('geminiChatInput');
+      const btn = document.getElementById('geminiChatSendBtn');
+      const message = (inp?.value || '').trim();
+      if (!message) return;
+
+      const history = chatTranscript
+        .filter((m) => !m.isError)
+        .slice(-10)
+        .map((m) => ({ role: m.role, text: m.text }));
+
+      appendChatEntry('user', message, [], false);
+      inp.value = '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Thinking...'; }
+      try {
+        const resp = await fetch('/api/gemini/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/hal+json' },
+          body: JSON.stringify({ message, history }),
+        });
+        const data = await safeParseJsonResponse(resp);
+        if (!resp.ok || data.status === 'error') {
+          appendChatEntry('model', data.message || `Error: ${data.error_type || resp.status}`, [], true);
+        } else {
+          appendChatEntry('model', data.reply || 'Done.', data.tool_traces || [], false);
+          await refreshSnapshot();
+        }
+      } catch (err) {
+        appendChatEntry('model', err.message, [], true);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Ask Gemini'; }
+      }
+    }
+
+    async function previewDiffForEditor() {
+      const name = (document.getElementById('nameInput')?.value || '').trim();
+      const candidate = document.getElementById('codeInput')?.value || '';
+      if (!name) return;
+      await followRestLink('POST', `/api/ast/${encodeURIComponent(name)}/diff`, { candidate_code: candidate });
+    }
+
+    async function runTestsForTarget() {
+      const name = (document.getElementById('nameInput')?.value || '').trim();
+      if (!name) return;
+      await followRestLink('POST', `/api/ast/${encodeURIComponent(name)}/test`, {});
+    }
+
+    async function rollbackTarget() {
+      const name = (document.getElementById('nameInput')?.value || '').trim();
+      if (!name) return;
+      const data = await followRestLink('POST', `/api/ast/${encodeURIComponent(name)}/rollback`, {});
+      if (data && typeof data.python_source === 'string') {
+        document.getElementById('codeInput').value = data.python_source;
+        syncHighlightedEditor('codeInput', 'python');
+      }
+    }
+
+    function attachPythonEditorErgonomics(textareaId) {
+      const ta = document.getElementById(textareaId);
+      if (!ta) return;
+      ta.addEventListener('keydown', (e) => {
+        if (e.altKey && (e.key === 'g' || e.key === 'G')) {
+          e.preventDefault();
+          generateLineIntoEditor(textareaId);
+          return;
+        }
+        const popupOpen = document.getElementById('acPopup')?.classList.contains('open');
+        if (e.key === 'Tab' && !popupOpen) {
+          e.preventDefault();
+          const val = ta.value;
+          const start = ta.selectionStart;
+          const end = ta.selectionEnd;
+          if (e.shiftKey) {
+            const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+            const lines = val.slice(lineStart, end).split('\n');
+            let firstCut = 0;
+            let totalCut = 0;
+            const dedented = lines.map((ln, idx) => {
+              const m = ln.match(/^ {1,4}/);
+              const cut = m ? m[0].length : (ln.startsWith('\t') ? 1 : 0);
+              if (idx === 0) firstCut = cut;
+              totalCut += cut;
+              return ln.slice(cut);
+            });
+            ta.value = val.slice(0, lineStart) + dedented.join('\n') + val.slice(end);
+            ta.setSelectionRange(Math.max(lineStart, start - firstCut), Math.max(lineStart, end - totalCut));
+          } else {
+            ta.value = val.slice(0, start) + '    ' + val.slice(end);
+            ta.setSelectionRange(start + 4, start + 4);
+          }
+          syncHighlightedEditor(textareaId, 'python');
+        } else if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+          const val = ta.value;
+          const start = ta.selectionStart;
+          const end = ta.selectionEnd;
+          const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+          const curLine = val.slice(lineStart, start);
+          const baseIndent = (curLine.match(/^([ \t]*)/) || ['', ''])[1];
+          const extra = curLine.trimEnd().endsWith(':') ? '    ' : '';
+          const ins = '\n' + baseIndent + extra;
+          e.preventDefault();
+          ta.value = val.slice(0, start) + ins + val.slice(end);
+          ta.setSelectionRange(start + ins.length, start + ins.length);
+          syncHighlightedEditor(textareaId, 'python');
+        }
+      });
+    }
+
+    attachPythonEditorErgonomics('codeInput');
+    attachPythonEditorErgonomics('cycleLeftCode');
+    attachPythonEditorErgonomics('cycleRightCode');
+    document.getElementById('geminiLinePrompt')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        generateLineIntoEditor('codeInput');
+      }
+    });
+    document.getElementById('geminiChatInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendGeminiChat();
+      }
+    });
+
+    bindHighlightedEditor('codeInput');
+    bindHighlightedEditor('cycleLeftCode', 'python');
+    bindHighlightedEditor('cycleRightCode', 'python');
+    updateFormFields();
+    refreshSnapshot();
+    connectSSE();
+  </script>
+</body>
+</html>

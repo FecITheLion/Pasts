@@ -1,0 +1,6 @@
+{
+  "name": "Dynamic AST & Line Studio",
+  "description": "Live Python AST Workbench, HATEOAS Console, and Gemini-powered single-line code generator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
